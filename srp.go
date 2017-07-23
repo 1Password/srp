@@ -27,7 +27,7 @@ type SrpGroup struct {
 var KnownGroups = make(map[string]*SrpGroup)
 
 func init() {
-	g3072 := &SrpGroup{g: big.NewInt(5), N: new(big.Int)}
+	g3072 := &SrpGroup{g: big.NewInt(2), N: new(big.Int)}
 	g3072.N.SetString("FFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"+
 		"29024E088A67CC74020BBEA63B139B22514A08798E3404DD"+
 		"EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"+
