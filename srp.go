@@ -259,7 +259,7 @@ func CalculateB(groupName string, k *big.Int, v *big.Int, randomKey *big.Int) *b
 }
 
 // CalculateClientRawKey calculates the raw key
-func CalculateClientRawKey(groupName string, a, b, u, x, k *big.Int) *big.Int {
+func CalculateClientRawKey(groupName string, a, B, u, x, k *big.Int) *big.Int {
 	group := knownGroups[groupName]
 
 	p := new(big.Int)
@@ -271,7 +271,7 @@ func CalculateClientRawKey(groupName string, a, b, u, x, k *big.Int) *big.Int {
 	r1.Exp(group.g, x, group.N)
 	r = new(big.Int)
 	r.Mul(r1, k)
-	base.Sub(b, r)
+	base.Sub(B, r)
 	result := new(big.Int)
 	result.Exp(base, p, group.N)
 
