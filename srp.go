@@ -274,16 +274,6 @@ func CalculateServerRawKey(groupName string, A, v, b, u *big.Int) (*big.Int, err
 	return result.Exp(result, b, group.N), nil
 }
 
-// NumberFromString converts a string to a number
-func NumberFromString(s string) *big.Int {
-	n := strings.Replace(s, " ", "", -1)
-
-	result := new(big.Int)
-	result.SetString(strings.TrimPrefix(n, "0x"), 16)
-
-	return result
-}
-
 // NumberFromBytes converts a byte array to a number
 func NumberFromBytes(bytes []byte) *big.Int {
 	result := new(big.Int)
@@ -295,7 +285,7 @@ func NumberFromBytes(bytes []byte) *big.Int {
 	return result
 }
 
-// RandomNumber returns a random number
+// RandomNumber returns a random 64 bit number
 func RandomNumber() *big.Int {
 	bytes := make([]byte, 8)
 	rand.Read(bytes)

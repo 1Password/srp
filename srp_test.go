@@ -25,7 +25,7 @@ var expectedVerifier = hexNumberString(
 
 var a = hexNumberString("60975527 035CF2AD 1989806F 0407210B C81EDC04 E2762A56 AFD529DD DA2D4393")
 
-var g1024 = &SrpGroup{g: big.NewInt(2), N: NumberFromString("0x EEAF0AB9ADB38DD69C33F80AFA8FC5E86072618775FF3C0B9EA2314C" +
+var g1024 = &Group{g: big.NewInt(2), N: NumberFromString("0x EEAF0AB9ADB38DD69C33F80AFA8FC5E86072618775FF3C0B9EA2314C" +
 	"9C256576D674DF7496EA81D3383B4813D692C6E0E0D5D8E250B98BE4" +
 	"8E495C1D6089DAD15DC7D7B46154D6B6CE8EF4AD69B15D4982559B29" +
 	"7BCF1885C529F566660E57EC68EDBC3C05726CC02FD4CBF4976EAA9A" +
@@ -158,4 +158,14 @@ func TestCalculateClientRawKey(t *testing.T) {
 	if fmt.Sprintf("%x", key) != fmt.Sprintf("%x", expectedKey) {
 		t.Errorf("key doesn't match expected key.\n%x\n!=\n%x", key, expectedKey)
 	}
+}
+
+// NumberFromString converts a string to a number
+func NumberFromString(s string) *big.Int {
+	n := strings.Replace(s, " ", "", -1)
+
+	result := new(big.Int)
+	result.SetString(strings.TrimPrefix(n, "0x"), 16)
+
+	return result
 }
