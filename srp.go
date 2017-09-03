@@ -143,23 +143,42 @@ func init() {
 	KnownGroups["4096"] = g4096
 	KnownGroups["6144"] = g6144
 	KnownGroups["8192"] = g8192
+	// DefaultGroup := g4096
+}
+
+// PublicIsValid checks to see whether public A or B is valid within the group
+func (g *SrpGroup) PublicIsValid(AorB *big.Int) bool {
+
+	result := big.Int{}
+	// There are three ways to fail.
+	// 1. If we aren't checking with respect to a valid group
+	// 2. If public paramater zero or a multiple of M
+	// 3. If public parameter is not relatively prime to N (a bad group?)
+	if g == nil {
+		return false
+	}
+
+	if result.Mod(AorB, g.N); result.Sign() == 0 {
+		return false
+	}
+
+	if result.GCD(nil, nil, AorB, g.N).Cmp(big.NewInt(1)) != 0 {
+		return false
+	}
+	return true
 }
 
 // AmodNisValid determines if "A mod N" is valid for the given
 // SRP group and value of A.
 func AmodNisValid(A *big.Int, groupName string) bool {
-	result := big.Int{}
-
 	group := KnownGroups[groupName]
-	if group == nil {
-		return false
-	}
+	return group.PublicIsValid(A)
+}
 
-	result.Mod(A, group.N)
-	if result.Sign() == 0 { // sign is zero only when the whole value is 0.
-		return false
-	}
-	return true
+// BmodNisValid determines if "B mod N" is valid for the given
+// SRP group and value of B.
+func BmodNisValid(B *big.Int, groupName string) bool {
+	return AmodNisValid(B, groupName)
 }
 
 // CalculateVerifier calculates the verifier
@@ -251,11 +270,16 @@ func CalculateX(method, alg, email, password string, salt []byte, iterations int
 	return nil, fmt.Errorf("invalid SRP method: %q", method)
 }
 
+// UISValid if u is positive
+func UISValid(u *big.Int) bool {
+	return u.Sign() == 1 // Is this too C-like for golang?
+}
+
 // CalculateA computes SRP A value based on a. The a should be randomly generated using `srp.RandomNumber(32)`
-func CalculateA(groupName string, a *big.Int) *big.Int {
+func CalculateA(groupName string, a *big.Int) (*big.Int, error) {
 	group := KnownGroups[groupName]
 	result := new(big.Int)
-	return result.Exp(group.g, a, group.N)
+	return result.Exp(group.g, a, group.N), nil
 }
 
 // CalculateB calculates B according to SRP RFC
@@ -273,8 +297,19 @@ func CalculateB(groupName string, k *big.Int, v *big.Int, randomKey *big.Int) *b
 }
 
 // CalculateClientRawKey calculates the raw key
-func CalculateClientRawKey(groupName string, a, B, u, x, k *big.Int) *big.Int {
+func CalculateClientRawKey(groupName string, a, B, u, x, k *big.Int) (*big.Int, error) {
 	group := KnownGroups[groupName]
+	if group == nil {
+		return nil, fmt.Errorf("no known SRP group \"%s\"", groupName)
+	}
+
+	if !group.PublicIsValid(B) {
+		return nil, fmt.Errorf("bad B (or bad N) in SRP exchange")
+	}
+
+	if !UISValid(u) {
+		return nil, fmt.Errorf("bad u in SRP calculations")
+	}
 
 	p := new(big.Int)
 	r := new(big.Int)
@@ -293,17 +328,27 @@ func CalculateClientRawKey(groupName string, a, B, u, x, k *big.Int) *big.Int {
 
 	hasher := sha256.New()
 	hasher.Write([]byte(hex))
-	return NumberFromBytes(hasher.Sum(nil))
+	return NumberFromBytes(hasher.Sum(nil)), nil
 }
 
-// CalculateRawKey calculates the raw key
-func CalculateRawKey(groupName string, A, v, b, u *big.Int) *big.Int {
+// CalculateServerRawKey calculates the raw key
+func CalculateServerRawKey(groupName string, A, v, b, u *big.Int) (*big.Int, error) {
 	group := KnownGroups[groupName]
+	if group == nil {
+		return nil, fmt.Errorf("no known SRP group \"%s\"", groupName)
+	}
+	if !group.PublicIsValid(A) {
+		return nil, fmt.Errorf("bad A (or bad N) in SRP exchange")
+	}
+
+	if !UISValid(u) {
+		return nil, fmt.Errorf("bad u in SRP calculations")
+	}
 
 	result := new(big.Int)
 	result.Exp(v, u, group.N)
 	result.Mul(result, A)
-	return result.Exp(result, b, group.N)
+	return result.Exp(result, b, group.N), nil
 }
 
 // NumberFromString converts a string to a number

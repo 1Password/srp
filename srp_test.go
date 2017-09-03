@@ -51,7 +51,7 @@ func hexNumberString(s string) *big.Int {
 }
 
 func TestCalculatesA(t *testing.T) {
-	userA := CalculateA("1024", a)
+	userA, _ := CalculateA("1024", a)
 	if fmt.Sprintf("%x", userA) != fmt.Sprintf("%x", expectedA) {
 		t.Errorf("userA != expectedA; \n%x\n != \n%x\n", userA, expectedA)
 	}
@@ -141,7 +141,7 @@ func TestSRPAgainstSpec(t *testing.T) {
 		t.Error("B calculation is not correct")
 	}
 
-	calculatedSecret := CalculateRawKey(groupName, A, v, b, u)
+	calculatedSecret, _ := CalculateServerRawKey(groupName, A, v, b, u)
 	if calculatedSecret.Cmp(premasterSecret) != 0 {
 		t.Error("Premaster secret is not correct")
 	}
@@ -154,7 +154,7 @@ func TestCalculateClientRawKey(t *testing.T) {
 	u := NumberFromString("dad353365f78590c1857b29f16e3a947df4707868e2dd2d2b4eafd35c8c854a1")
 	k := NumberFromString("4832374a524b354d344e424a584f42434f45544356584a484641")
 	expectedKey := NumberFromString("f6bef3d6fa5a08a849bf61041cd5b3185c16aede851c819a3644fa7e918c4da6")
-	key := CalculateClientRawKey("4096", a, B, u, x, k)
+	key, _ := CalculateClientRawKey("4096", a, B, u, x, k)
 	if fmt.Sprintf("%x", key) != fmt.Sprintf("%x", expectedKey) {
 		t.Errorf("key doesn't match expected key.\n%x\n!=\n%x", key, expectedKey)
 	}
