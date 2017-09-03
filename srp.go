@@ -4,21 +4,21 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base32"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strings"
 )
 
-type SrpGroup struct {
+// Group has a generator, g, and a modulus, N.
+type Group struct {
 	g, N *big.Int
 }
 
 // KnownGroups is a map from strings to Diffie-Hellman group parameters
-var KnownGroups = make(map[string]*SrpGroup)
+var KnownGroups = make(map[string]*Group)
 
 func init() {
-	g3072 := &SrpGroup{g: big.NewInt(2), N: new(big.Int)}
+	g3072 := &Group{g: big.NewInt(2), N: new(big.Int)}
 	g3072.N.SetString("FFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"+
 		"29024E088A67CC74020BBEA63B139B22514A08798E3404DD"+
 		"EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"+
@@ -37,7 +37,7 @@ func init() {
 		"43DB5BFCE0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF", 16)
 
 	// RFC 3526 id 16
-	g4096 := &SrpGroup{g: big.NewInt(5), N: new(big.Int)}
+	g4096 := &Group{g: big.NewInt(5), N: new(big.Int)}
 	g4096.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -59,7 +59,7 @@ func init() {
 		"FFFFFFFFFFFFFFFF", 16)
 
 	// RFC 3526 group id 17
-	g6144 := &SrpGroup{g: big.NewInt(5), N: new(big.Int)}
+	g6144 := &Group{g: big.NewInt(5), N: new(big.Int)}
 	g6144.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -90,7 +90,7 @@ func init() {
 		"6DCC4024FFFFFFFFFFFFFFFF", 16)
 
 	// RFC 3526 group id 18
-	g8192 := &SrpGroup{g: big.NewInt(19), N: new(big.Int)}
+	g8192 := &Group{g: big.NewInt(19), N: new(big.Int)}
 	g8192.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -129,7 +129,7 @@ func init() {
 		"FC026E479558E4475677E9AA9E3050E2765694DFC81F56E880B96E71"+
 		"60C980DD98EDD3DFFFFFFFFFFFFFFFFF", 16)
 
-	// KnownGroups = make(map[string]*SrpGroup)
+	// KnownGroups = make(map[string]*Group)
 	KnownGroups["3027"] = g3072
 	KnownGroups["4096"] = g4096
 	KnownGroups["6144"] = g6144
@@ -138,7 +138,7 @@ func init() {
 }
 
 // PublicIsValid checks to see whether public A or B is valid within the group
-func (g *SrpGroup) PublicIsValid(AorB *big.Int) bool {
+func (g *Group) PublicIsValid(AorB *big.Int) bool {
 
 	result := big.Int{}
 	// There are three ways to fail.
@@ -191,11 +191,6 @@ func prehash(s string) string {
 	bits := hasher.Sum(nil)
 
 	return strings.TrimRight(base32.StdEncoding.EncodeToString(bits), "=")
-}
-
-// bytesToHex returns hexadecimal representation of the slice.
-func bytesToHex(b []byte) string {
-	return hex.EncodeToString(b)
 }
 
 // UISValid if u is positive

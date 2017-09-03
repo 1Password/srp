@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"hash"
 	"io"
@@ -81,4 +82,9 @@ func CalculateX(method, alg, email, password string, salt []byte, iterations int
 	}
 
 	return nil, fmt.Errorf("invalid SRP method: %q", method)
+}
+
+// bytesToHex returns hexadecimal representation of the slice.
+func bytesToHex(b []byte) string {
+	return hex.EncodeToString(b)
 }
