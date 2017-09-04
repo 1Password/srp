@@ -104,18 +104,63 @@ func (s *Srp) MakeB() (*big.Int, error) {
 }
 
 // myPublic returns (and posibly calculates) A if client and B if server
+// This abstraction is probably not very useful and will probably just go away
 func (s *Srp) myPublic() (*big.Int, error) {
 	if s.Group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
 
-	if s.secret == nil {
-		s.secret = s.GenerateMySecret()
-	}
-
 	if s.IsServer {
-		return s.B.Exp(s.Group.g, s.secret, s.Group.N), nil
+		return s.MakeB()
 	}
-	return s.A.Exp(s.Group.g, s.secret, s.Group.N), nil
+	return s.MakeA()
+}
 
+// calculateU hashes the bytes of A and B
+// This is not the same hashing as used in old interface
+func (s *Srp) calculateU() (*big.Int, error) {
+	if s.A == nil || s.B == nil {
+		return nil, fmt.Errorf("both A and B must be known to calculate u")
+	}
+
+	h := sha256.New()
+	h.Write(s.A.Bytes())
+	h.Write(s.B.Bytes())
+	s.u = NumberFromBytes(h.Sum(nil))
+	return s.u, nil
+}
+
+func (s *Srp) isPublicValid(AorB *big.Int) bool {
+	if s.Group == nil {
+		return false
+	}
+	if AorB == nil {
+		return false
+	}
+
+	t := big.Int{}
+	if t.Mod(AorB, s.Group.N); t.Sign() == 0 {
+		return false
+	}
+	if t.GCD(nil, nil, AorB, s.Group.N).Cmp(big.NewInt(1)) != 0 {
+		return false
+	}
+	return true
+}
+
+func (s *Srp) isAValid() bool {
+	return s.isPublicValid(s.A)
+}
+func (s *Srp) isBValid() bool {
+	return s.isPublicValid(s.B)
+}
+
+func (s *Srp) isUValid() bool {
+	if s.u == nil {
+		return false
+	}
+	if s.u.Cmp(big.NewInt(1)) != 0 {
+		return false
+	}
+	return true
 }
