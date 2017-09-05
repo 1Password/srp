@@ -61,6 +61,7 @@ func (s *Srp) GenerateMySecret() *big.Int {
 
 // makeLittleK initializes multiplier based on group paramaters
 // k = H(N, g)
+// This does _not_ confirm to RFC5054 padding
 func (s *Srp) makeLittleK() (*big.Int, error) {
 	if s.k != nil {
 		return s.k, nil
@@ -102,11 +103,10 @@ func (s *Srp) MakeA() (*big.Int, error) {
 
 // MakeB calculates B (if necessary) and returms it
 func (s *Srp) MakeB() (*big.Int, error) {
-	if s.B != nil {
-		return s.B, nil
-	}
 
-	var term1, term2 *big.Int
+	term1 := new(big.Int)
+	term2 := new(big.Int)
+	s.B = new(big.Int)
 
 	// Absolute Prerequisits: Group, IsServer, v
 	if s.Group == nil {
