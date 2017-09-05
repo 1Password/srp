@@ -1,6 +1,7 @@
 package srp
 
 import (
+	rand "crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"math/big"
@@ -8,20 +9,48 @@ import (
 
 // Srp calculator object
 type Srp struct {
-	Group      *Group
-	secret     *big.Int // Little a or little b (ephemeral secrets)
-	A, B       *big.Int // Public A and B ephemeral values
-	x, v       *big.Int // x and verifier (long term secrets)
-	u          *big.Int // calculated scrambling parameter
-	k          *big.Int // multiplier parameter
-	K          *big.Int // Derived session K
-	IsServer   bool
-	secretSize int // size for generating ephemeral secrets in bytes
+	Group        *Group
+	secret       *big.Int // Little a or little b (ephemeral secrets)
+	A, B         *big.Int // Public A and B ephemeral values
+	x, v         *big.Int // x and verifier (long term secrets)
+	u            *big.Int // calculated scrambling parameter
+	k            *big.Int // multiplier parameter
+	Key          *big.Int // Derived session K
+	IsServer     bool
+	secretSize   int // size for generating ephemeral secrets in bytes
+	b5Compatible bool
+}
+
+// NewSrp creates an Srp object and sets up defaults
+// xORv is the SRP-x if setting up a client or the verifier if setting up a server
+func NewSrp(serverSide bool, b5Compatible bool, group *Group, xORv *big.Int) *Srp {
+	s := &Srp{}
+
+	s.IsServer = serverSide
+	s.b5Compatible = b5Compatible
+	s.Group = group
+	if s.IsServer {
+		*(s.v) = *xORv
+	} else {
+		*(s.x) = *xORv
+	}
+
+	s.secretSize = 8
+
+	s.makeLittleK()
+	s.GenerateMySecret()
+	if s.IsServer {
+		s.MakeB()
+	} else {
+		s.MakeA()
+	}
+
+	return s
 }
 
 // GenerateMySecret creates the little a or b
 func (s *Srp) GenerateMySecret() *big.Int {
-	s.secret = RandomNumber()
+	s.secret = s.random()
 	return s.secret
 }
 
@@ -37,7 +66,7 @@ func (s *Srp) makeLittleK() (*big.Int, error) {
 	h := sha256.New()
 	h.Write(s.Group.N.Bytes())
 	h.Write(s.Group.g.Bytes())
-	s.k = NumberFromBytes(h.Sum(nil))
+	s.k = s.numberFromBytes(h.Sum(nil))
 	return s.k, nil
 }
 
@@ -116,17 +145,21 @@ func (s *Srp) myPublic() (*big.Int, error) {
 	return s.MakeA()
 }
 
-// calculateU hashes the bytes of A and B
-// This is not the same hashing as used in old interface
+// calculateU creates a hash A and B
+// Its behavior depends on whether b5Compatible is set
 func (s *Srp) calculateU() (*big.Int, error) {
 	if s.A == nil || s.B == nil {
 		return nil, fmt.Errorf("both A and B must be known to calculate u")
 	}
 
 	h := sha256.New()
-	h.Write(s.A.Bytes())
-	h.Write(s.B.Bytes())
-	s.u = NumberFromBytes(h.Sum(nil))
+	if s.b5Compatible {
+		h.Write([]byte(fmt.Sprintf("%x%x", s.A, s.B)))
+	} else {
+		h.Write(s.A.Bytes())
+		h.Write(s.B.Bytes())
+	}
+	s.u = s.numberFromBytes(h.Sum(nil))
 	return s.u, nil
 }
 
@@ -163,4 +196,85 @@ func (s *Srp) isUValid() bool {
 		return false
 	}
 	return true
+}
+
+func (s *Srp) makeVerifer() (*big.Int, error) {
+	if s.Group == nil {
+		return nil, fmt.Errorf("group not set")
+	}
+	if s.x == nil {
+		return nil, fmt.Errorf("x must be known to calculate v")
+	}
+
+	return s.v.Exp(s.Group.g, s.x, s.Group.N), nil
+}
+
+// MakeKey creates and returns the session Key
+func (s *Srp) MakeKey() (*big.Int, error) {
+	if s.Group == nil {
+		return nil, fmt.Errorf("group not set")
+	}
+	if !s.isUValid() {
+		return nil, fmt.Errorf("u must be known to make Key")
+	}
+	if s.secret == nil {
+		return nil, fmt.Errorf("cannot make Key with my ephemeral secret")
+	}
+
+	b := new(big.Int)
+	e := new(big.Int)
+	S := new(big.Int)
+
+	if s.IsServer {
+		// S = (Av^u) ^ b
+		if s.v == nil || s.A == nil {
+			return nil, fmt.Errorf("not enough is know to create Key")
+		}
+		b.Exp(s.v, s.u, s.Group.N)
+		b.Mul(s.v, s.A)
+		e = s.secret
+
+	} else {
+		// (B - kg^x) ^ (a + ux)
+		if s.B == nil || s.k == nil || s.x == nil {
+			return nil, fmt.Errorf("not enough is know to create Key")
+		}
+		e.Mul(s.u, s.x)
+		e.Add(e, s.secret)
+
+		b.Exp(s.Group.g, s.x, s.Group.N)
+		b.Mul(b, s.k)
+		b.Sub(s.B, b)
+		b.Mod(b, s.Group.N)
+	}
+
+	S.Exp(b, e, s.Group.N)
+
+	h := sha256.New()
+	if s.b5Compatible {
+		h.Write([]byte(fmt.Sprintf("%x", S)))
+	} else {
+		h.Write(S.Bytes())
+	}
+
+	s.Key = s.numberFromBytes(h.Sum(nil))
+	return s.Key, nil
+
+}
+
+func (s *Srp) random() *big.Int {
+	bytes := make([]byte, s.secretSize)
+	rand.Read(bytes)
+
+	return s.numberFromBytes(bytes)
+}
+
+func (s *Srp) numberFromBytes(bytes []byte) *big.Int {
+	result := new(big.Int)
+	for _, b := range bytes {
+		result.Lsh(result, 8)
+		result.Add(result, big.NewInt(int64(b)))
+	}
+
+	return result
 }
