@@ -175,11 +175,43 @@ func TestNewSrpClient(t *testing.T) {
 	x := NumberFromString("740299d2306764ad9e87f37cd54179e388fd45c85fea3b030eb425d7adcb2773")
 	s := NewSrp(false, true, KnownGroups["4096"], x)
 
+	expectedV4096 := NumberFromString("d05240ed513a4f267608e64cf2a84f5106741ddbf1435707a84f530207409d7" +
+		"af1e671182f9d77855b61c628df2b8f6ba8e9b6068fbc84fab80b4542f44c666e17358ebffa8d6fb00fd7037a" +
+		"b9ee450413f240ab1e4b586e48bf43ce38f41ad7e406d0150ea83c8f216db4dec06ec5d9fb1cbfd049f70438f" +
+		"c14a2faa2a920ad1b298bb1c70989d17163cf52632f202e77824d71c0ff2dd2ef63ebdcd6140beb471b9a7f7b" +
+		"14e2d45478994dac95d27f2b45404e564c90eb65655bf6a789bfd665035f711b7cf766a380b921a666dfcfee0" +
+		"238b27eafdd8a953a50cc2c4f291458d48ef9fd0740da59aa325b9165ebb97d125511b03e1056bd448b322d7d" +
+		"250816783462cff6f9ecd40813522dac10329b7c4bcd0c8f0ceec2eb2c46ba442ac62a84994e2fcdb94cbfe05" +
+		"7cad578c5e4d28822cd283e8430b8a1e1106f6e2536e8596b8a0de46717fbd4e9f06b796364aa930bbcf87433" +
+		"cbbbf15b077b2998569027edcae71d09112857d0fac06d9f9f70371f43f8581a229c290ade4e63251f8d8a0c9" +
+		"61e20d357069472db3ff422c3ecacf6ff9b2af54003d6aa344a37e7a7f04a1a667d5299475cea6b02c09b5850" +
+		"5c895efbd86703a0a375ccdf81616e8bee6cfc947467c4bcbe4a7d3e245df32cd7192e212ffe635ff8ac9727d" +
+		"6fe05ede8338f6f3bc18b5359ea8afc13ce3952cd426fb0934c5ea54e71e10bf81028f")
+
 	if s.A == nil {
 		t.Errorf("A was not calculated")
 	}
 	if _, err = s.makeVerifer(); err != nil {
 		t.Errorf("couldn't make v: %s", err)
+	}
+
+	if expectedV4096.Cmp(s.v) != 0 {
+		t.Errorf("v mismatch\n\tExpected:\t%s\n\tReceived:\t%s", expectedV4096, s.v)
+	}
+
+}
+
+func TestSrpClient1024(t *testing.T) {
+	var err error
+	x := expectedX
+	s := NewSrp(false, true, KnownGroups["1024"], x)
+
+	if _, err = s.makeVerifer(); err != nil {
+		t.Errorf("couldn't make v: %s", err)
+	}
+
+	if expectedVerifier.Cmp(s.v) != 0 {
+		t.Errorf("v mismatch\n\tExpected:\t%s\n\tReceived:\t%s", expectedVerifier, s.v)
 	}
 
 }
