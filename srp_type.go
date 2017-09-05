@@ -24,18 +24,23 @@ type Srp struct {
 // NewSrp creates an Srp object and sets up defaults
 // xORv is the SRP-x if setting up a client or the verifier if setting up a server
 func NewSrp(serverSide bool, b5Compatible bool, group *Group, xORv *big.Int) *Srp {
-	s := &Srp{}
+	s := new(Srp)
 
 	s.IsServer = serverSide
 	s.b5Compatible = b5Compatible
-	s.Group = group
+
+	// There has to be a better way, but everything else crashed
+	s.Group = new(Group)
+	s.Group.N = group.N
+	s.Group.g = group.g
+
 	if s.IsServer {
-		*(s.v) = *xORv
+		s.v = xORv
 	} else {
-		*(s.x) = *xORv
+		s.x = xORv
 	}
 
-	s.secretSize = 8
+	s.secretSize = 24
 
 	s.makeLittleK()
 	s.GenerateMySecret()
@@ -89,7 +94,10 @@ func (s *Srp) MakeA() (*big.Int, error) {
 	if s.secret == nil {
 		s.secret = s.GenerateMySecret()
 	}
-	return s.A.Exp(s.Group.g, s.secret, s.Group.N), nil
+
+	s.A = new(big.Int)
+	result := s.A.Exp(s.Group.g, s.secret, s.Group.N)
+	return result, nil
 }
 
 // MakeB calculates B (if necessary) and returms it
@@ -148,7 +156,7 @@ func (s *Srp) myPublic() (*big.Int, error) {
 // calculateU creates a hash A and B
 // Its behavior depends on whether b5Compatible is set
 func (s *Srp) calculateU() (*big.Int, error) {
-	if s.A == nil || s.B == nil {
+	if !s.isAValid() || !s.isBValid() {
 		return nil, fmt.Errorf("both A and B must be known to calculate u")
 	}
 
@@ -206,6 +214,9 @@ func (s *Srp) makeVerifer() (*big.Int, error) {
 		return nil, fmt.Errorf("x must be known to calculate v")
 	}
 
+	if s.v == nil {
+		s.v = new(big.Int)
+	}
 	return s.v.Exp(s.Group.g, s.x, s.Group.N), nil
 }
 

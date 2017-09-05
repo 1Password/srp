@@ -169,3 +169,17 @@ func NumberFromString(s string) *big.Int {
 
 	return result
 }
+
+func TestNewSrpClient(t *testing.T) {
+	var err error
+	x := NumberFromString("740299d2306764ad9e87f37cd54179e388fd45c85fea3b030eb425d7adcb2773")
+	s := NewSrp(false, true, KnownGroups["4096"], x)
+
+	if s.A == nil {
+		t.Errorf("A was not calculated")
+	}
+	if _, err = s.makeVerifer(); err != nil {
+		t.Errorf("couldn't make v: %s", err)
+	}
+
+}
