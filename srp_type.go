@@ -246,7 +246,7 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 			return nil, fmt.Errorf("not enough is know to create Key")
 		}
 		b.Exp(s.v, s.u, s.Group.N)
-		b.Mul(s.v, s.A)
+		b.Mul(b, s.A)
 		e = s.secret
 
 	} else {

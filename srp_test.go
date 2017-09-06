@@ -295,8 +295,15 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		t.Error("A miracle: u meets 5054 expected value")
 	}
 
+	server.u = u
 	if ret, err = server.MakeKey(); err != nil {
 		t.Errorf("MakeKey failed: %s", err)
+	}
+	if ret.Cmp(server.Key) != 0 {
+		t.Error("Key does not equal Key (nobody tell Ayn Rand)")
+	}
+	if premasterSecret.Cmp(server.premasterKey) != 0 {
+		t.Error("premasterKey is incorrect")
 	}
 
 }
