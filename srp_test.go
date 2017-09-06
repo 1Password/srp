@@ -264,7 +264,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	server := NewSrp(true, true, KnownGroups[groupName], v)
 
 	var err error
-	var bRet *big.Int
+	var ret *big.Int
 
 	// Our calculation of k is not compatable with RFC5054
 	if server.k.Cmp(k) == 0 {
@@ -273,10 +273,10 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	server.k = k
 	server.secret = b
 
-	if bRet, err = server.MakeB(); err != nil {
+	if ret, err = server.MakeB(); err != nil {
 		t.Errorf("MakeB failed: %s", err)
 	}
-	if bRet.Cmp(server.B) != 0 {
+	if ret.Cmp(server.B) != 0 {
 		t.Error("B does not equal B (nobody tell Ayn Rand)")
 	}
 
@@ -285,6 +285,18 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	}
 
 	server.A = A
-	server.calculateU()
+	if ret, err = server.calculateU(); err != nil {
+		t.Errorf("calculateu failed: %s", err)
+	}
+	if ret.Cmp(server.u) != 0 {
+		t.Error("u does not equal u (nobody tell Ayn Rand)")
+	}
+	if u.Cmp(server.u) == 0 {
+		t.Error("A miracle: u meets 5054 expected value")
+	}
+
+	if ret, err = server.MakeKey(); err != nil {
+		t.Errorf("MakeKey failed: %s", err)
+	}
 
 }

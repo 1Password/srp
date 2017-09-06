@@ -15,7 +15,8 @@ type Srp struct {
 	x, v         *big.Int // x and verifier (long term secrets)
 	u            *big.Int // calculated scrambling parameter
 	k            *big.Int // multiplier parameter
-	Key          *big.Int // Derived session K
+	premasterKey *big.Int // unhashed derived session secret
+	Key          *big.Int // H(premasterKey)
 	IsServer     bool
 	secretSize   int // size for generating ephemeral secrets in bytes
 	b5Compatible bool
@@ -200,7 +201,7 @@ func (s *Srp) isUValid() bool {
 	if s.u == nil {
 		return false
 	}
-	if s.u.Cmp(big.NewInt(1)) != 0 {
+	if s.u.Cmp(big.NewInt(0)) == 0 {
 		return false
 	}
 	return true
@@ -234,7 +235,10 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 
 	b := new(big.Int)
 	e := new(big.Int)
-	S := new(big.Int)
+
+	if s.premasterKey == nil {
+		s.premasterKey = new(big.Int)
+	}
 
 	if s.IsServer {
 		// S = (Av^u) ^ b
@@ -259,13 +263,13 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 		b.Mod(b, s.Group.N)
 	}
 
-	S.Exp(b, e, s.Group.N)
+	s.premasterKey.Exp(b, e, s.Group.N)
 
 	h := sha256.New()
 	if s.b5Compatible {
-		h.Write([]byte(fmt.Sprintf("%x", S)))
+		h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
 	} else {
-		h.Write(S.Bytes())
+		h.Write(s.premasterKey.Bytes())
 	}
 
 	s.Key = s.numberFromBytes(h.Sum(nil))
