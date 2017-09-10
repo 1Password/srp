@@ -269,7 +269,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	server.k = k
 	server.secret = b
 
-	if ret, err = server.MakeB(); err != nil {
+	if ret, err = server.makeB(); err != nil {
 		t.Errorf("MakeB failed: %s", err)
 	}
 	if ret.Cmp(server.B) != 0 {
@@ -314,7 +314,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	}
 	client.k = k
 	client.secret = a
-	if ret, err = client.MakeA(); err != nil {
+	if ret, err = client.makeA(); err != nil {
 		t.Errorf("MakeA failed: %s", err)
 	}
 	if ret.Cmp(client.A) != 0 {

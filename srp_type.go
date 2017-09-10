@@ -28,45 +28,61 @@ type DHGroup struct {
 	g *big.Int
 }
 
+// NewDHGroup allocates the big ints of this group
+func NewDHGroup() *DHGroup {
+	r := new(DHGroup)
+	r.N = new(big.Int)
+	r.g = new(big.Int)
+	return r
+}
+
+// B0 is a BigInt zero
+var B0 = big.NewInt(0)
+
 // NewSrp creates an Srp object and sets up defaults
 // xORv is the SRP-x if setting up a client or the verifier if setting up a server
 func NewSrp(serverSide bool, b5Compatible bool, group *Group, xORv *big.Int) *Srp {
 	s := new(Srp)
 
+	// Setting these to Int-zero gives me a useful way to test
+	// if these have been properly set later
+	s.A = big.NewInt(0)
+	s.secret = big.NewInt(0)
+	s.B = big.NewInt(0)
+	s.u = big.NewInt(0)
+	s.k = big.NewInt(0)
+	s.x = big.NewInt(0)
+	s.v = big.NewInt(0)
+	s.premasterKey = big.NewInt(0)
+	s.Key = big.NewInt(0)
+	s.Group = NewDHGroup()
+
 	s.IsServer = serverSide
 	s.b5Compatible = b5Compatible
+	s.secretSize = 32 // what RFC 5054 suggests
 
-	// There has to be a better way, but everything else crashed
-	s.Group = new(DHGroup)
-	tmpN := new(big.Int)
-	tmpN = tmpN.Set(group.N)
-	s.Group.N = tmpN
-
-	tmpG := new(big.Int)
-	tmpG = tmpG.Set(group.g)
-	s.Group.g = tmpG
+	s.Group.N = s.Group.N.Set(group.N)
+	s.Group.g = s.Group.g.Set(group.g)
 
 	if s.IsServer {
-		s.v = xORv
+		s.v.Set(xORv)
 	} else {
-		s.x = xORv
+		s.x.Set(xORv)
 	}
 
-	s.secretSize = 24
-
 	s.makeLittleK()
-	s.GenerateMySecret()
+	s.generateMySecret()
 	if s.IsServer {
-		s.MakeB()
+		s.makeB()
 	} else {
-		s.MakeA()
+		s.makeA()
 	}
 
 	return s
 }
 
-// GenerateMySecret creates the little a or b
-func (s *Srp) GenerateMySecret() *big.Int {
+// generateMySecret creates the little a or b
+func (s *Srp) generateMySecret() *big.Int {
 	s.secret = s.random()
 	return s.secret
 }
@@ -75,9 +91,6 @@ func (s *Srp) GenerateMySecret() *big.Int {
 // k = H(N, g)
 // This does _not_ confirm to RFC5054 padding
 func (s *Srp) makeLittleK() (*big.Int, error) {
-	if s.k != nil {
-		return s.k, nil
-	}
 	if s.Group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
@@ -88,21 +101,16 @@ func (s *Srp) makeLittleK() (*big.Int, error) {
 	return s.k, nil
 }
 
-// SetLittleK allows us to manually set k if we don't like the specs
-func (s *Srp) SetLittleK(k *big.Int) {
-	*(s.k) = *k // Is this deferencing needed? Can I trust caller to not change value in k?
-}
-
-// MakeA calculates A (if necessary) and returns it
-func (s *Srp) MakeA() (*big.Int, error) {
+// makeA calculates A (if necessary) and returns it
+func (s *Srp) makeA() (*big.Int, error) {
 	if s.Group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
 	if s.IsServer {
 		return nil, fmt.Errorf("only the client can make A")
 	}
-	if s.secret == nil {
-		s.secret = s.GenerateMySecret()
+	if s.secret.Cmp(B0) == 0 {
+		s.secret = s.generateMySecret()
 	}
 
 	s.A = new(big.Int)
@@ -110,12 +118,11 @@ func (s *Srp) MakeA() (*big.Int, error) {
 	return result, nil
 }
 
-// MakeB calculates B (if necessary) and returms it
-func (s *Srp) MakeB() (*big.Int, error) {
+// makeB calculates B (if necessary) and returms it
+func (s *Srp) makeB() (*big.Int, error) {
 
 	term1 := new(big.Int)
 	term2 := new(big.Int)
-	s.B = new(big.Int)
 
 	// Absolute Prerequisits: Group, IsServer, v
 	if s.Group == nil {
@@ -124,19 +131,19 @@ func (s *Srp) MakeB() (*big.Int, error) {
 	if !s.IsServer {
 		return nil, fmt.Errorf("only the server can make B")
 	}
-	if s.v == nil {
+	if s.v.Cmp(B0) == 0 {
 		return nil, fmt.Errorf("k must be known before B can be calculated")
 	}
 
 	// Generatable prerequists: k, b if needed
-	if s.k == nil {
+	if s.k.Cmp(B0) == 0 {
 		var err error
 		if s.k, err = s.makeLittleK(); err != nil {
 			return nil, err
 		}
 	}
-	if s.secret == nil {
-		s.secret = s.GenerateMySecret()
+	if s.secret.Cmp(B0) == 0 {
+		s.secret = s.generateMySecret()
 	}
 
 	// B = kv + g^b  (term1 is kv, term2 is g^b)
@@ -147,19 +154,6 @@ func (s *Srp) MakeB() (*big.Int, error) {
 	s.B.Mod(s.B, s.Group.N) // more modular reduction
 
 	return s.B, nil
-}
-
-// myPublic returns (and posibly calculates) A if client and B if server
-// This abstraction is probably not very useful and will probably just go away
-func (s *Srp) myPublic() (*big.Int, error) {
-	if s.Group == nil {
-		return nil, fmt.Errorf("group not set")
-	}
-
-	if s.IsServer {
-		return s.MakeB()
-	}
-	return s.MakeA()
 }
 
 // calculateU creates a hash A and B
@@ -209,7 +203,7 @@ func (s *Srp) isUValid() bool {
 	if s.u == nil {
 		return false
 	}
-	if s.u.Cmp(big.NewInt(0)) == 0 {
+	if s.u.Cmp(B0) == 0 {
 		return false
 	}
 	return true
@@ -219,11 +213,9 @@ func (s *Srp) makeVerifer() (*big.Int, error) {
 	if s.Group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
-	if s.x == nil {
+	if s.x.Cmp(B0) == 0 {
 		return nil, fmt.Errorf("x must be known to calculate v")
 	}
-
-	s.v = new(big.Int)
 
 	result := s.v.Exp(s.Group.g, s.x, s.Group.N)
 
@@ -238,16 +230,12 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 	if !s.isUValid() {
 		return nil, fmt.Errorf("u must be known to make Key")
 	}
-	if s.secret == nil {
+	if s.secret.Cmp(B0) == 0 {
 		return nil, fmt.Errorf("cannot make Key with my ephemeral secret")
 	}
 
 	b := new(big.Int)
 	e := new(big.Int)
-
-	if s.premasterKey == nil {
-		s.premasterKey = new(big.Int)
-	}
 
 	if s.IsServer {
 		// S = (Av^u) ^ b
