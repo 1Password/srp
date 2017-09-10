@@ -14,6 +14,14 @@ type Group struct {
 	g, N *big.Int
 }
 
+// NewGroup creates and initializes a an SRP group
+func NewGroup() *Group {
+	r := new(Group)
+	r.g = new(big.Int)
+	r.N = new(big.Int)
+	return r
+}
+
 // KnownGroups is a map from strings to Diffie-Hellman group parameters
 var KnownGroups = make(map[string]*Group)
 

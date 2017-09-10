@@ -9,7 +9,7 @@ import (
 
 // Srp calculator object
 type Srp struct {
-	Group        *Group
+	Group        *DHGroup
 	secret       *big.Int // Little a or little b (ephemeral secrets)
 	A, B         *big.Int // Public A and B ephemeral values
 	x, v         *big.Int // x and verifier (long term secrets)
@@ -22,6 +22,12 @@ type Srp struct {
 	b5Compatible bool
 }
 
+// DHGroup is the Diffie-Hellman group we will use for SRP
+type DHGroup struct {
+	N *big.Int
+	g *big.Int
+}
+
 // NewSrp creates an Srp object and sets up defaults
 // xORv is the SRP-x if setting up a client or the verifier if setting up a server
 func NewSrp(serverSide bool, b5Compatible bool, group *Group, xORv *big.Int) *Srp {
@@ -31,9 +37,14 @@ func NewSrp(serverSide bool, b5Compatible bool, group *Group, xORv *big.Int) *Sr
 	s.b5Compatible = b5Compatible
 
 	// There has to be a better way, but everything else crashed
-	s.Group = new(Group)
-	s.Group.N = group.N
-	s.Group.g = group.g
+	s.Group = new(DHGroup)
+	tmpN := new(big.Int)
+	tmpN = tmpN.Set(group.N)
+	s.Group.N = tmpN
+
+	tmpG := new(big.Int)
+	tmpG = tmpG.Set(group.g)
+	s.Group.g = tmpG
 
 	if s.IsServer {
 		s.v = xORv
@@ -84,9 +95,6 @@ func (s *Srp) SetLittleK(k *big.Int) {
 
 // MakeA calculates A (if necessary) and returns it
 func (s *Srp) MakeA() (*big.Int, error) {
-	if s.A != nil {
-		return s.A, nil
-	}
 	if s.Group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
@@ -215,10 +223,11 @@ func (s *Srp) makeVerifer() (*big.Int, error) {
 		return nil, fmt.Errorf("x must be known to calculate v")
 	}
 
-	if s.v == nil {
-		s.v = new(big.Int)
-	}
-	return s.v.Exp(s.Group.g, s.x, s.Group.N), nil
+	s.v = new(big.Int)
+
+	result := s.v.Exp(s.Group.g, s.x, s.Group.N)
+
+	return result, nil
 }
 
 // MakeKey creates and returns the session Key

@@ -254,13 +254,6 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		"3499B200 210DCC1F 10EB3394 3CD67FC8 8A2F39A4 BE5BEC4E C0A3212D" +
 		"C346D7E4 74B29EDE 8A469FFE CA686E5A")
 
-	_ = x
-	_ = k
-	_ = a
-	_ = A
-	_ = u
-	_ = premasterSecret
-
 	server := NewSrp(true, true, KnownGroups[groupName], v)
 
 	var err error
@@ -270,6 +263,9 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	if server.k.Cmp(k) == 0 {
 		t.Error("A miracle: k meets 5054 expected value")
 	}
+
+	calculatedServerK := new(big.Int)
+	calculatedServerK.Set(server.k)
 	server.k = k
 	server.secret = b
 
@@ -295,6 +291,8 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		t.Error("A miracle: u meets 5054 expected value")
 	}
 
+	calculatedServerU := new(big.Int)
+	calculatedServerU.Set(server.u)
 	server.u = u
 	if ret, err = server.MakeKey(); err != nil {
 		t.Errorf("MakeKey failed: %s", err)
@@ -304,6 +302,38 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	}
 	if premasterSecret.Cmp(server.premasterKey) != 0 {
 		t.Error("premasterKey is incorrect")
+	}
+
+	// Now lets compute the key from the client side
+
+	client := NewSrp(false, true, KnownGroups[groupName], x)
+
+	// Our calculation of k is not compatable with RFC5054
+	if client.k.Cmp(calculatedServerK) != 0 {
+		t.Error("client and server ks don't match")
+	}
+	client.k = k
+	client.secret = a
+	if ret, err = client.MakeA(); err != nil {
+		t.Errorf("MakeA failed: %s", err)
+	}
+	if ret.Cmp(client.A) != 0 {
+		t.Error("A does not equal A (nobody tell Ayn Rand)")
+	}
+
+	if client.A.Cmp(A) != 0 {
+		t.Error("A is incorrect")
+	}
+
+	client.B = B
+	if ret, err = client.calculateU(); err != nil {
+		t.Errorf("calculated client u failed: %s", err)
+	}
+	if ret.Cmp(client.u) != 0 {
+		t.Error("client u does not equal u (nobody tell Ayn Rand)")
+	}
+	if u.Cmp(client.u) == 0 {
+		t.Error("A miracle: client u meets 5054 expected value")
 	}
 
 }
