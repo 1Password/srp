@@ -209,7 +209,8 @@ func (s *Srp) isUValid() bool {
 	return true
 }
 
-func (s *Srp) makeVerifer() (*big.Int, error) {
+// MakeVerifer creates to the verifier from x and paramebers
+func (s *Srp) MakeVerifer() (*big.Int, error) {
 	if s.Group == nil {
 		return nil, fmt.Errorf("group not set")
 	}

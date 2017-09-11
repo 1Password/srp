@@ -191,7 +191,7 @@ func TestNewSrpClient(t *testing.T) {
 	if s.A == nil {
 		t.Errorf("A was not calculated")
 	}
-	if _, err = s.makeVerifer(); err != nil {
+	if _, err = s.MakeVerifer(); err != nil {
 		t.Errorf("couldn't make v: %s", err)
 	}
 
@@ -206,7 +206,7 @@ func TestSrpClient1024(t *testing.T) {
 	x := expectedX
 	s := NewSrp(false, true, KnownGroups["1024"], x)
 
-	if _, err = s.makeVerifer(); err != nil {
+	if _, err = s.MakeVerifer(); err != nil {
 		t.Errorf("couldn't make v: %s", err)
 	}
 
@@ -334,6 +334,34 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	}
 	if u.Cmp(client.u) == 0 {
 		t.Error("A miracle: client u meets 5054 expected value")
+	}
+
+	if client.u.Cmp(calculatedServerU) != 0 {
+		t.Error("client.u != server.u")
+	}
+
+}
+
+func TestClientServerMatch(t *testing.T) {
+	groupName := "4096"
+
+	xbytes := make([]byte, 32)
+	x := NumberFromBytes(xbytes)
+
+	client := NewSrp(false, true, KnownGroups[groupName], x)
+
+	client.MakeVerifer()
+
+	server := NewSrp(true, true, KnownGroups[groupName], client.v)
+
+	server.A.Set(client.A)
+	client.A.Set(server.A)
+
+	server.MakeKey()
+	client.MakeKey()
+
+	if server.Key.Cmp(client.Key) != 0 {
+		t.Error("Server and Client keys don't match")
 	}
 
 }
