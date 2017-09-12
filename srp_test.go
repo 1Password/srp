@@ -264,8 +264,6 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		t.Error("A miracle: k meets 5054 expected value")
 	}
 
-	calculatedServerK := new(big.Int)
-	calculatedServerK.Set(server.k)
 	server.k = k
 	server.secret = b
 
@@ -291,8 +289,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		t.Error("A miracle: u meets 5054 expected value")
 	}
 
-	calculatedServerU := new(big.Int)
-	calculatedServerU.Set(server.u)
+	// Use standard test vector u
 	server.u = u
 	if ret, err = server.MakeKey(); err != nil {
 		t.Errorf("MakeKey failed: %s", err)
@@ -309,9 +306,6 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	client := NewSrp(false, true, KnownGroups[groupName], x)
 
 	// Our calculation of k is not compatable with RFC5054
-	if client.k.Cmp(calculatedServerK) != 0 {
-		t.Error("client and server ks don't match")
-	}
 	client.k = k
 	client.secret = a
 	if ret, err = client.makeA(); err != nil {
@@ -336,10 +330,6 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		t.Error("A miracle: client u meets 5054 expected value")
 	}
 
-	if client.u.Cmp(calculatedServerU) != 0 {
-		t.Error("client.u != server.u")
-	}
-
 }
 
 func TestClientServerMatch(t *testing.T) {
@@ -354,12 +344,18 @@ func TestClientServerMatch(t *testing.T) {
 
 	server := NewSrp(true, true, KnownGroups[groupName], client.v)
 
-	server.A.Set(client.A)
-	client.A.Set(server.A)
+	server.SetOthersPublic(client.A)
+	client.SetOthersPublic(server.B)
 
 	server.MakeKey()
 	client.MakeKey()
 
+	if server.k.Cmp(client.k) != 0 {
+		t.Error("Server and Client u don't match")
+	}
+	if server.u.Cmp(client.u) != 0 {
+		t.Error("Server and Client u don't match")
+	}
 	if server.Key.Cmp(client.Key) != 0 {
 		t.Error("Server and Client keys don't match")
 	}

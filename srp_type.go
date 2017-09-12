@@ -192,6 +192,20 @@ func (s *Srp) isPublicValid(AorB *big.Int) bool {
 	return true
 }
 
+// SetOthersPublic if server set A, if client set B
+func (s *Srp) SetOthersPublic(AorB *big.Int) error {
+	if !s.isPublicValid(AorB) {
+		return fmt.Errorf("invalid public exponent")
+	}
+
+	if s.IsServer {
+		s.A.Set(AorB)
+	} else {
+		s.B.Set(AorB)
+	}
+	return nil
+}
+
 func (s *Srp) isAValid() bool {
 	return s.isPublicValid(s.A)
 }
@@ -200,9 +214,6 @@ func (s *Srp) isBValid() bool {
 }
 
 func (s *Srp) isUValid() bool {
-	if s.u == nil {
-		return false
-	}
 	if s.u.Cmp(B0) == 0 {
 		return false
 	}
@@ -235,13 +246,13 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 		return nil, fmt.Errorf("cannot make Key with my ephemeral secret")
 	}
 
-	b := new(big.Int)
-	e := new(big.Int)
+	b := new(big.Int) // base
+	e := new(big.Int) // exponent
 
 	if s.IsServer {
 		// S = (Av^u) ^ b
 		if s.v == nil || s.A == nil {
-			return nil, fmt.Errorf("not enough is know to create Key")
+			return nil, fmt.Errorf("not enough is known to create Key")
 		}
 		b.Exp(s.v, s.u, s.Group.N)
 		b.Mul(b, s.A)
@@ -250,7 +261,7 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 	} else {
 		// (B - kg^x) ^ (a + ux)
 		if s.B == nil || s.k == nil || s.x == nil {
-			return nil, fmt.Errorf("not enough is know to create Key")
+			return nil, fmt.Errorf("not enough is known to create Key")
 		}
 		e.Mul(s.u, s.x)
 		e.Add(e, s.secret)
