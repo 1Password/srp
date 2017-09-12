@@ -9,31 +9,18 @@ import (
 
 // Srp calculator object
 type Srp struct {
-	Group        *DHGroup
-	secret       *big.Int // Little a or little b (ephemeral secrets)
-	A, B         *big.Int // Public A and B ephemeral values
-	x, v         *big.Int // x and verifier (long term secrets)
-	u            *big.Int // calculated scrambling parameter
-	k            *big.Int // multiplier parameter
-	premasterKey *big.Int // unhashed derived session secret
-	Key          *big.Int // H(premasterKey)
-	IsServer     bool
-	secretSize   int // size for generating ephemeral secrets in bytes
-	b5Compatible bool
-}
-
-// DHGroup is the Diffie-Hellman group we will use for SRP
-type DHGroup struct {
-	N *big.Int
-	g *big.Int
-}
-
-// NewDHGroup allocates the big ints of this group
-func NewDHGroup() *DHGroup {
-	r := new(DHGroup)
-	r.N = new(big.Int)
-	r.g = new(big.Int)
-	return r
+	Group            *Group
+	ephemeralPrivate *big.Int // Little a or little b (ephemeral secrets)
+	ephemeralPublicA *big.Int // Public A
+	ephemeralPublicB *big.Int // Public A and B ephemeral values
+	x, v             *big.Int // x and verifier (long term secrets)
+	u                *big.Int // calculated scrambling parameter
+	k                *big.Int // multiplier parameter
+	premasterKey     *big.Int // unhashed derived session secret
+	Key              *big.Int // H(premasterKey)
+	IsServer         bool
+	secretSize       int // size for generating ephemeral secrets in bytes
+	b5Compatible     bool
 }
 
 // B0 is a BigInt zero
@@ -46,16 +33,16 @@ func NewSrp(serverSide bool, b5Compatible bool, group *Group, xORv *big.Int) *Sr
 
 	// Setting these to Int-zero gives me a useful way to test
 	// if these have been properly set later
-	s.A = big.NewInt(0)
-	s.secret = big.NewInt(0)
-	s.B = big.NewInt(0)
+	s.ephemeralPublicA = big.NewInt(0)
+	s.ephemeralPrivate = big.NewInt(0)
+	s.ephemeralPublicB = big.NewInt(0)
 	s.u = big.NewInt(0)
 	s.k = big.NewInt(0)
 	s.x = big.NewInt(0)
 	s.v = big.NewInt(0)
 	s.premasterKey = big.NewInt(0)
 	s.Key = big.NewInt(0)
-	s.Group = NewDHGroup()
+	s.Group = NewGroup()
 
 	s.IsServer = serverSide
 	s.b5Compatible = b5Compatible
@@ -83,8 +70,8 @@ func NewSrp(serverSide bool, b5Compatible bool, group *Group, xORv *big.Int) *Sr
 
 // generateMySecret creates the little a or b
 func (s *Srp) generateMySecret() *big.Int {
-	s.secret = s.random()
-	return s.secret
+	s.ephemeralPrivate = s.random()
+	return s.ephemeralPrivate
 }
 
 // makeLittleK initializes multiplier based on group paramaters
@@ -109,12 +96,12 @@ func (s *Srp) makeA() (*big.Int, error) {
 	if s.IsServer {
 		return nil, fmt.Errorf("only the client can make A")
 	}
-	if s.secret.Cmp(B0) == 0 {
-		s.secret = s.generateMySecret()
+	if s.ephemeralPrivate.Cmp(B0) == 0 {
+		s.ephemeralPrivate = s.generateMySecret()
 	}
 
-	s.A = new(big.Int)
-	result := s.A.Exp(s.Group.g, s.secret, s.Group.N)
+	s.ephemeralPublicA = new(big.Int)
+	result := s.ephemeralPublicA.Exp(s.Group.g, s.ephemeralPrivate, s.Group.N)
 	return result, nil
 }
 
@@ -142,18 +129,35 @@ func (s *Srp) makeB() (*big.Int, error) {
 			return nil, err
 		}
 	}
-	if s.secret.Cmp(B0) == 0 {
-		s.secret = s.generateMySecret()
+	if s.ephemeralPrivate.Cmp(B0) == 0 {
+		s.ephemeralPrivate = s.generateMySecret()
 	}
 
 	// B = kv + g^b  (term1 is kv, term2 is g^b)
-	term2.Exp(s.Group.g, s.secret, s.Group.N)
+	term2.Exp(s.Group.g, s.ephemeralPrivate, s.Group.N)
 	term1.Mul(s.k, s.v)
 	term1.Mod(term1, s.Group.N) // We can work with smaller numbers through modular reduction
-	s.B.Add(term1, term2)
-	s.B.Mod(s.B, s.Group.N) // more modular reduction
+	s.ephemeralPublicB.Add(term1, term2)
+	s.ephemeralPublicB.Mod(s.ephemeralPublicB, s.Group.N) // more modular reduction
 
-	return s.B, nil
+	return s.ephemeralPublicB, nil
+}
+
+// EphemeralPublic returns A on client or B on server
+func (s *Srp) EphemeralPublic() *big.Int {
+	if s.IsServer {
+		return s.ephemeralPublicB
+	} else {
+		return s.ephemeralPublicA
+	}
+}
+
+// Verifier retruns the verifier as calculated by the client
+func (s *Srp) Verifier() (*big.Int, error) {
+	if s.IsServer {
+		return nil, fmt.Errorf("server may not produce a verifier")
+	}
+	return s.makeVerifier()
 }
 
 // calculateU creates a hash A and B
@@ -165,10 +169,10 @@ func (s *Srp) calculateU() (*big.Int, error) {
 
 	h := sha256.New()
 	if s.b5Compatible {
-		h.Write([]byte(fmt.Sprintf("%x%x", s.A, s.B)))
+		h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
 	} else {
-		h.Write(s.A.Bytes())
-		h.Write(s.B.Bytes())
+		h.Write(s.ephemeralPublicA.Bytes())
+		h.Write(s.ephemeralPublicB.Bytes())
 	}
 	s.u = s.numberFromBytes(h.Sum(nil))
 	return s.u, nil
@@ -199,18 +203,18 @@ func (s *Srp) SetOthersPublic(AorB *big.Int) error {
 	}
 
 	if s.IsServer {
-		s.A.Set(AorB)
+		s.ephemeralPublicA.Set(AorB)
 	} else {
-		s.B.Set(AorB)
+		s.ephemeralPublicB.Set(AorB)
 	}
 	return nil
 }
 
 func (s *Srp) isAValid() bool {
-	return s.isPublicValid(s.A)
+	return s.isPublicValid(s.ephemeralPublicA)
 }
 func (s *Srp) isBValid() bool {
-	return s.isPublicValid(s.B)
+	return s.isPublicValid(s.ephemeralPublicB)
 }
 
 func (s *Srp) isUValid() bool {
@@ -220,8 +224,8 @@ func (s *Srp) isUValid() bool {
 	return true
 }
 
-// MakeVerifer creates to the verifier from x and paramebers
-func (s *Srp) MakeVerifer() (*big.Int, error) {
+// makeVerifier creates to the verifier from x and paramebers
+func (s *Srp) makeVerifier() (*big.Int, error) {
 	if s.Group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
@@ -242,7 +246,7 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 	if !s.isUValid() {
 		return nil, fmt.Errorf("u must be known to make Key")
 	}
-	if s.secret.Cmp(B0) == 0 {
+	if s.ephemeralPrivate.Cmp(B0) == 0 {
 		return nil, fmt.Errorf("cannot make Key with my ephemeral secret")
 	}
 
@@ -251,24 +255,24 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 
 	if s.IsServer {
 		// S = (Av^u) ^ b
-		if s.v == nil || s.A == nil {
+		if s.v == nil || s.ephemeralPublicA == nil {
 			return nil, fmt.Errorf("not enough is known to create Key")
 		}
 		b.Exp(s.v, s.u, s.Group.N)
-		b.Mul(b, s.A)
-		e = s.secret
+		b.Mul(b, s.ephemeralPublicA)
+		e = s.ephemeralPrivate
 
 	} else {
 		// (B - kg^x) ^ (a + ux)
-		if s.B == nil || s.k == nil || s.x == nil {
+		if s.ephemeralPublicB == nil || s.k == nil || s.x == nil {
 			return nil, fmt.Errorf("not enough is known to create Key")
 		}
 		e.Mul(s.u, s.x)
-		e.Add(e, s.secret)
+		e.Add(e, s.ephemeralPrivate)
 
 		b.Exp(s.Group.g, s.x, s.Group.N)
 		b.Mul(b, s.k)
-		b.Sub(s.B, b)
+		b.Sub(s.ephemeralPublicB, b)
 		b.Mod(b, s.Group.N)
 	}
 

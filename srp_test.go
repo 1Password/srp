@@ -1,6 +1,7 @@
 package srp
 
 import (
+	rand "crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -188,10 +189,10 @@ func TestNewSrpClient(t *testing.T) {
 		"5c895efbd86703a0a375ccdf81616e8bee6cfc947467c4bcbe4a7d3e245df32cd7192e212ffe635ff8ac9727d" +
 		"6fe05ede8338f6f3bc18b5359ea8afc13ce3952cd426fb0934c5ea54e71e10bf81028f")
 
-	if s.A == nil {
+	if s.ephemeralPublicA == nil {
 		t.Errorf("A was not calculated")
 	}
-	if _, err = s.MakeVerifer(); err != nil {
+	if _, err = s.Verifier(); err != nil {
 		t.Errorf("couldn't make v: %s", err)
 	}
 
@@ -203,15 +204,16 @@ func TestNewSrpClient(t *testing.T) {
 
 func TestSrpClient1024(t *testing.T) {
 	var err error
+	var clientV *big.Int
 	x := expectedX
 	s := NewSrp(false, true, KnownGroups["1024"], x)
 
-	if _, err = s.MakeVerifer(); err != nil {
+	if clientV, err = s.Verifier(); err != nil {
 		t.Errorf("couldn't make v: %s", err)
 	}
 
-	if expectedVerifier.Cmp(s.v) != 0 {
-		t.Errorf("v mismatch\n\tExpected:\t%s\n\tReceived:\t%s", expectedVerifier, s.v)
+	if expectedVerifier.Cmp(clientV) != 0 {
+		t.Errorf("v mismatch\n\tExpected:\t%s\n\tReceived:\t%s", expectedVerifier, clientV)
 	}
 
 }
@@ -265,20 +267,20 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	}
 
 	server.k = k
-	server.secret = b
+	server.ephemeralPrivate = b
 
 	if ret, err = server.makeB(); err != nil {
 		t.Errorf("MakeB failed: %s", err)
 	}
-	if ret.Cmp(server.B) != 0 {
+	if ret.Cmp(server.ephemeralPublicB) != 0 {
 		t.Error("B does not equal B (nobody tell Ayn Rand)")
 	}
 
-	if server.B.Cmp(B) != 0 {
+	if server.ephemeralPublicB.Cmp(B) != 0 {
 		t.Error("B is incorrect")
 	}
 
-	server.A = A
+	server.ephemeralPublicA = A
 	if ret, err = server.calculateU(); err != nil {
 		t.Errorf("calculateu failed: %s", err)
 	}
@@ -307,19 +309,19 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 
 	// Our calculation of k is not compatable with RFC5054
 	client.k = k
-	client.secret = a
+	client.ephemeralPrivate = a
 	if ret, err = client.makeA(); err != nil {
 		t.Errorf("MakeA failed: %s", err)
 	}
-	if ret.Cmp(client.A) != 0 {
+	if ret.Cmp(client.ephemeralPublicA) != 0 {
 		t.Error("A does not equal A (nobody tell Ayn Rand)")
 	}
 
-	if client.A.Cmp(A) != 0 {
+	if client.ephemeralPublicA.Cmp(A) != 0 {
 		t.Error("A is incorrect")
 	}
 
-	client.B = B
+	client.ephemeralPublicB = B
 	if ret, err = client.calculateU(); err != nil {
 		t.Errorf("calculated client u failed: %s", err)
 	}
@@ -333,25 +335,30 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 }
 
 func TestClientServerMatch(t *testing.T) {
+	var err error
+	var v *big.Int
 	groupName := "4096"
 
 	xbytes := make([]byte, 32)
+	rand.Read(xbytes)
 	x := NumberFromBytes(xbytes)
 
 	client := NewSrp(false, true, KnownGroups[groupName], x)
 
-	client.MakeVerifer()
+	if v, err = client.Verifier(); err != nil {
+		t.Errorf("verifier creation failed: %s", err)
+	}
 
-	server := NewSrp(true, true, KnownGroups[groupName], client.v)
+	server := NewSrp(true, true, KnownGroups[groupName], v)
 
-	server.SetOthersPublic(client.A)
-	client.SetOthersPublic(server.B)
+	server.SetOthersPublic(client.ephemeralPublicA)
+	client.SetOthersPublic(server.ephemeralPublicB)
 
 	server.MakeKey()
 	client.MakeKey()
 
 	if server.k.Cmp(client.k) != 0 {
-		t.Error("Server and Client u don't match")
+		t.Error("Server and Client k don't match")
 	}
 	if server.u.Cmp(client.u) != 0 {
 		t.Error("Server and Client u don't match")
