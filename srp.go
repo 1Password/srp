@@ -206,62 +206,6 @@ func UISValid(u *big.Int) bool {
 	return u.Sign() == 1 // Is this too C-like for golang?
 }
 
-// CalculateA computes SRP A value based on a. The a should be randomly generated using `srp.RandomNumber(32)`
-func CalculateA(groupName string, a *big.Int) (*big.Int, error) {
-	group := KnownGroups[groupName]
-	result := new(big.Int)
-	return result.Exp(group.g, a, group.N), nil
-}
-
-// CalculateB calculates B according to SRP RFC
-func CalculateB(groupName string, k *big.Int, v *big.Int, randomKey *big.Int) *big.Int {
-	group := KnownGroups[groupName]
-
-	result := new(big.Int)
-	result.Exp(group.g, randomKey, group.N)
-
-	m := new(big.Int)
-	m.Mul(k, v)
-
-	result.Add(m, result)
-	return result.Mod(result, group.N)
-}
-
-// CalculateClientRawKey calculates the raw key
-func CalculateClientRawKey(groupName string, a, B, u, x, k *big.Int) (*big.Int, error) {
-	group := KnownGroups[groupName]
-	if group == nil {
-		return nil, fmt.Errorf("no known SRP group \"%s\"", groupName)
-	}
-
-	if !group.PublicIsValid(B) {
-		return nil, fmt.Errorf("bad B (or bad N) in SRP exchange")
-	}
-
-	if !UISValid(u) {
-		return nil, fmt.Errorf("bad u in SRP calculations")
-	}
-
-	p := new(big.Int)
-	r := new(big.Int)
-	r.Mul(u, x)
-	p.Add(a, r)
-	base := new(big.Int)
-	r1 := new(big.Int)
-	r1.Exp(group.g, x, group.N)
-	r = new(big.Int)
-	r.Mul(r1, k)
-	base.Sub(B, r)
-	result := new(big.Int)
-	result.Exp(base, p, group.N)
-
-	hex := fmt.Sprintf("%x", result)
-
-	hasher := sha256.New()
-	hasher.Write([]byte(hex))
-	return NumberFromBytes(hasher.Sum(nil)), nil
-}
-
 // CalculateServerRawKey calculates the raw key
 func CalculateServerRawKey(groupName string, A, v, b, u *big.Int) (*big.Int, error) {
 	group := KnownGroups[groupName]
