@@ -167,27 +167,6 @@ func (g *Group) PublicIsValid(AorB *big.Int) bool {
 	return true
 }
 
-// AmodNisValid determines if "A mod N" is valid for the given
-// SRP group and value of A.
-func AmodNisValid(A *big.Int, groupName string) bool {
-	group := KnownGroups[groupName]
-	return group.PublicIsValid(A)
-}
-
-// BmodNisValid determines if "B mod N" is valid for the given
-// SRP group and value of B.
-func BmodNisValid(B *big.Int, groupName string) bool {
-	return AmodNisValid(B, groupName)
-}
-
-// CalculateVerifier calculates the verifier
-func CalculateVerifier(groupName string, x *big.Int) *big.Int {
-	group := KnownGroups[groupName]
-
-	i := new(big.Int)
-	return i.Exp(group.g, x, group.N)
-}
-
 // prehash is kept for compatibility with legacy implementations
 func prehash(s string) string {
 	if s == "" {
