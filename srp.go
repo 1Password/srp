@@ -1,10 +1,8 @@
 package srp
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base32"
-	"fmt"
 	"math/big"
 	"strings"
 )
@@ -180,31 +178,6 @@ func prehash(s string) string {
 	return strings.TrimRight(base32.StdEncoding.EncodeToString(bits), "=")
 }
 
-// UISValid if u is positive
-func UISValid(u *big.Int) bool {
-	return u.Sign() == 1 // Is this too C-like for golang?
-}
-
-// CalculateServerRawKey calculates the raw key
-func CalculateServerRawKey(groupName string, A, v, b, u *big.Int) (*big.Int, error) {
-	group := KnownGroups[groupName]
-	if group == nil {
-		return nil, fmt.Errorf("no known SRP group \"%s\"", groupName)
-	}
-	if !group.PublicIsValid(A) {
-		return nil, fmt.Errorf("bad A (or bad N) in SRP exchange")
-	}
-
-	if !UISValid(u) {
-		return nil, fmt.Errorf("bad u in SRP calculations")
-	}
-
-	result := new(big.Int)
-	result.Exp(v, u, group.N)
-	result.Mul(result, A)
-	return result.Exp(result, b, group.N), nil
-}
-
 // NumberFromBytes converts a byte array to a number
 func NumberFromBytes(bytes []byte) *big.Int {
 	result := new(big.Int)
@@ -214,12 +187,4 @@ func NumberFromBytes(bytes []byte) *big.Int {
 	}
 
 	return result
-}
-
-// RandomNumber returns a random 64 bit number
-func RandomNumber() *big.Int {
-	bytes := make([]byte, 8)
-	rand.Read(bytes)
-
-	return NumberFromBytes(bytes)
 }

@@ -7,7 +7,7 @@ import (
 	"math/big"
 )
 
-// Srp calculator object
+// Srp calculator object. To
 type Srp struct {
 	group            *Group
 	ephemeralPrivate *big.Int // Little a or little b (ephemeral secrets)
@@ -84,7 +84,7 @@ func (s *Srp) makeLittleK() (*big.Int, error) {
 	h := sha256.New()
 	h.Write(s.group.N.Bytes())
 	h.Write(s.group.g.Bytes())
-	s.k = s.numberFromBytes(h.Sum(nil))
+	s.k = NumberFromBytes(h.Sum(nil))
 	return s.k, nil
 }
 
@@ -152,6 +152,31 @@ func (s *Srp) EphemeralPublic() *big.Int {
 	}
 }
 
+// PublicIsValid checks to see whether public A or B is valid within the group
+func (s *Srp) IsPublicValid(AorB *big.Int) bool {
+
+	result := big.Int{}
+	// There are three ways to fail.
+	// 1. If we aren't checking with respect to a valid group
+	// 2. If public paramater zero or a multiple of M
+	// 3. If public parameter is not relatively prime to N (a bad group?)
+	if s.group == nil {
+		return false
+	}
+	if s.group.g.Cmp(B0) == 0 {
+		return false
+	}
+
+	if result.Mod(AorB, s.group.N); result.Sign() == 0 {
+		return false
+	}
+
+	if result.GCD(nil, nil, AorB, s.group.N).Cmp(big.NewInt(1)) != 0 {
+		return false
+	}
+	return true
+}
+
 // Verifier retruns the verifier as calculated by the client
 func (s *Srp) Verifier() (*big.Int, error) {
 	if s.isServer {
@@ -163,7 +188,7 @@ func (s *Srp) Verifier() (*big.Int, error) {
 // calculateU creates a hash A and B
 // Its behavior depends on whether b5Compatible is set
 func (s *Srp) calculateU() (*big.Int, error) {
-	if !s.isAValid() || !s.isBValid() {
+	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		return nil, fmt.Errorf("both A and B must be known to calculate u")
 	}
 
@@ -174,33 +199,15 @@ func (s *Srp) calculateU() (*big.Int, error) {
 		h.Write(s.ephemeralPublicA.Bytes())
 		h.Write(s.ephemeralPublicB.Bytes())
 	}
-	s.u = s.numberFromBytes(h.Sum(nil))
+	s.u = NumberFromBytes(h.Sum(nil))
 	return s.u, nil
-}
-
-func (s *Srp) isPublicValid(AorB *big.Int) bool {
-	if s.group == nil {
-		return false
-	}
-	if AorB == nil {
-		return false
-	}
-
-	t := big.Int{}
-	if t.Mod(AorB, s.group.N); t.Sign() == 0 {
-		return false
-	}
-	if t.GCD(nil, nil, AorB, s.group.N).Cmp(big.NewInt(1)) != 0 {
-		return false
-	}
-	return true
 }
 
 // SetOthersPublic sets A if server and B if client
 // Caller _must_ check for error status, and abort the session
 // on error. Any further action with Srp should crash after bad A or B set
 func (s *Srp) SetOthersPublic(AorB *big.Int) error {
-	if !s.isPublicValid(AorB) {
+	if !s.IsPublicValid(AorB) {
 		s.ephemeralPrivate = nil
 		s.ephemeralPublicA = nil
 		s.ephemeralPublicB = nil
@@ -215,13 +222,6 @@ func (s *Srp) SetOthersPublic(AorB *big.Int) error {
 		s.ephemeralPublicB.Set(AorB)
 	}
 	return nil
-}
-
-func (s *Srp) isAValid() bool {
-	return s.isPublicValid(s.ephemeralPublicA)
-}
-func (s *Srp) isBValid() bool {
-	return s.isPublicValid(s.ephemeralPublicB)
 }
 
 func (s *Srp) isUValid() bool {
@@ -292,7 +292,7 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 		h.Write(s.premasterKey.Bytes())
 	}
 
-	s.Key = s.numberFromBytes(h.Sum(nil))
+	s.Key = NumberFromBytes(h.Sum(nil))
 	return s.Key, nil
 
 }
@@ -301,15 +301,5 @@ func (s *Srp) random() *big.Int {
 	bytes := make([]byte, s.secretSize)
 	rand.Read(bytes)
 
-	return s.numberFromBytes(bytes)
-}
-
-func (s *Srp) numberFromBytes(bytes []byte) *big.Int {
-	result := new(big.Int)
-	for _, b := range bytes {
-		result.Lsh(result, 8)
-		result.Add(result, big.NewInt(int64(b)))
-	}
-
-	return result
+	return NumberFromBytes(bytes)
 }
