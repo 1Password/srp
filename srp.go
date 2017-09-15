@@ -143,27 +143,6 @@ func init() {
 	// DefaultGroup := g4096
 }
 
-// PublicIsValid checks to see whether public A or B is valid within the group
-func (g *Group) PublicIsValid(AorB *big.Int) bool {
-
-	result := big.Int{}
-	// There are three ways to fail.
-	// 1. If we aren't checking with respect to a valid group
-	// 2. If public paramater zero or a multiple of M
-	// 3. If public parameter is not relatively prime to N (a bad group?)
-	if g == nil {
-		return false
-	}
-
-	if result.Mod(AorB, g.N); result.Sign() == 0 {
-		return false
-	}
-
-	if result.GCD(nil, nil, AorB, g.N).Cmp(big.NewInt(1)) != 0 {
-		return false
-	}
-	return true
-}
 
 // prehash is kept for compatibility with legacy implementations
 func prehash(s string) string {
