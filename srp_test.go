@@ -287,3 +287,24 @@ func TestClientServerMatch(t *testing.T) {
 	}
 
 }
+
+func TestBadA(t *testing.T) {
+	xbytes := make([]byte, 32)
+	rand.Read(xbytes)
+	v := NumberFromBytes(xbytes)
+
+	server := NewSrp(true, true, KnownGroups["4096"], v)
+
+	if err := server.SetOthersPublic(server.group.N); err == nil {
+		t.Error("a bad A was accepted")
+	}
+
+	key, err := server.MakeKey()
+	if err == nil {
+		t.Error("no error on key creation after bad B")
+	}
+	if key != nil {
+		t.Error("key created after bad B")
+	}
+
+}

@@ -19,6 +19,7 @@ type Srp struct {
 	premasterKey     *big.Int // unhashed derived session secret
 	Key              *big.Int // H(premasterKey)
 	isServer         bool
+	badState         bool
 	secretSize       int // size for generating ephemeral secrets in bytes
 	b5Compatible     bool
 }
@@ -43,6 +44,7 @@ func NewSrp(serverSide bool, b5Compatible bool, group *Group, xORv *big.Int) *Sr
 	s.premasterKey = big.NewInt(0)
 	s.Key = big.NewInt(0)
 	s.group = NewGroup()
+	s.badState = false
 
 	s.isServer = serverSide
 	s.b5Compatible = b5Compatible
@@ -152,7 +154,7 @@ func (s *Srp) EphemeralPublic() *big.Int {
 	}
 }
 
-// PublicIsValid checks to see whether public A or B is valid within the group
+// IsPublicValid checks to see whether public A or B is valid within the group
 func (s *Srp) IsPublicValid(AorB *big.Int) bool {
 
 	result := big.Int{}
@@ -189,6 +191,7 @@ func (s *Srp) Verifier() (*big.Int, error) {
 // Its behavior depends on whether b5Compatible is set
 func (s *Srp) calculateU() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
+		s.u = nil
 		return nil, fmt.Errorf("both A and B must be known to calculate u")
 	}
 
@@ -205,14 +208,11 @@ func (s *Srp) calculateU() (*big.Int, error) {
 
 // SetOthersPublic sets A if server and B if client
 // Caller _must_ check for error status, and abort the session
-// on error. Any further action with Srp should crash after bad A or B set
+// on error.
 func (s *Srp) SetOthersPublic(AorB *big.Int) error {
 	if !s.IsPublicValid(AorB) {
-		s.ephemeralPrivate = nil
-		s.ephemeralPublicA = nil
-		s.ephemeralPublicB = nil
-		s.x = nil
-		s.v = nil
+		s.badState = true
+		s.Key = nil
 		return fmt.Errorf("invalid public exponent")
 	}
 
@@ -225,6 +225,10 @@ func (s *Srp) SetOthersPublic(AorB *big.Int) error {
 }
 
 func (s *Srp) isUValid() bool {
+	if s.u == nil || s.badState {
+		s.u = nil
+		return false
+	}
 	if s.u.Cmp(B0) == 0 {
 		return false
 	}
@@ -235,6 +239,9 @@ func (s *Srp) isUValid() bool {
 func (s *Srp) makeVerifier() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
+	}
+	if s.badState {
+		return nil, fmt.Errorf("we have bad data")
 	}
 	if s.x.Cmp(B0) == 0 {
 		return nil, fmt.Errorf("x must be known to calculate v")
@@ -247,6 +254,9 @@ func (s *Srp) makeVerifier() (*big.Int, error) {
 
 // MakeKey creates and returns the session Key
 func (s *Srp) MakeKey() (*big.Int, error) {
+	if s.badState {
+		return nil, fmt.Errorf("we've got bad data")
+	}
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
