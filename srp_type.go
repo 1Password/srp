@@ -7,7 +7,43 @@ import (
 	"math/big"
 )
 
-// Srp calculator object. To
+/*
+Srp provides the primary interface to this package.
+
+Because many of the inputs require checks against malicious data, many are set using
+setters instead of being public/exported in the type. This is to ensure that bad
+values do not get used.
+
+Creating the Srp object with with NewSrp() takes care of generating your ephemeral
+secret (a or b depending on whether you are a client or server), your public
+ephemeral key (A or B depending on whether you are a client or server),
+the multiplier k. (There is a setter for k if you wish to use a different scheme
+to set those.
+
+A typical use by a server might be something like
+
+	server := NewSrp(true, true, KnownGroups["4096"], v)
+
+	A := getAfromYourClientConnection(...) // your code
+	if result, err := server.SetOthersPublic(A); result == nil || err != nil {
+		// client sent a malicious A. Kill this session now
+	}
+
+	sendBtoClientSomehow(server.EphemeralPublic())
+
+	if sessionKey, err := server.MakeKey(); sessionKey == nil || err != nil {
+		// something went wrong
+	}
+
+	// You must still prove that both server and client created the same Key.
+
+This still leaves some work outside of what the Srp object provides.
+The key derivation of x is not handled by this object. Nor is the communication
+between client and server. Finally the check that both client and server have
+negotiated the same Key is left outside.
+
+
+*/
 type Srp struct {
 	group            *Group
 	ephemeralPrivate *big.Int // Little a or little b (ephemeral secrets)
@@ -27,8 +63,20 @@ type Srp struct {
 // B0 is a BigInt zero
 var B0 = big.NewInt(0)
 
-// NewSrp creates an Srp object and sets up defaults
-// xORv is the SRP-x if setting up a client or the verifier if setting up a server
+/*
+NewSrp creates an Srp object and sets up defaults.
+
+serverSide bool: Use true when creating an Srp object to be used on the server,
+otherwise set false.
+
+b5Compatible bool: Use the same hashing (for creation of u as is used in
+1Password's authentication)
+
+group *Group: Pointer to the Diffie-Hellman group to be used.
+
+xORv *big.Int: Your long term secret, x or v. If you are the client, pass in x.
+If you are the server pass in v.
+*/
 func NewSrp(serverSide bool, b5Compatible bool, group *Group, xORv *big.Int) *Srp {
 	s := new(Srp)
 
@@ -146,6 +194,10 @@ func (s *Srp) makeB() (*big.Int, error) {
 }
 
 // EphemeralPublic returns A on client or B on server
+// If you are a client, you will need to send A to the server.
+// If you are a server, you will need to send B to the client.
+// But this abstracts away from user needing to keep A and B straight. Caller
+// just needs to send EphemeralPublic() to the other party.
 func (s *Srp) EphemeralPublic() *big.Int {
 	if s.isServer {
 		return s.ephemeralPublicB
@@ -155,6 +207,10 @@ func (s *Srp) EphemeralPublic() *big.Int {
 }
 
 // IsPublicValid checks to see whether public A or B is valid within the group
+// A client can do very bad things by sending a malicious A to the server.
+// The server can do mildly bad things by sending a malicious B to the client.
+// This method is public in case the user wishes to check those values earlier than
+// than using SetOthersPublic(), which also performs this check.
 func (s *Srp) IsPublicValid(AorB *big.Int) bool {
 
 	result := big.Int{}
@@ -179,7 +235,10 @@ func (s *Srp) IsPublicValid(AorB *big.Int) bool {
 	return true
 }
 
-// Verifier retruns the verifier as calculated by the client
+// Verifier retruns the verifier as calculated by the client.
+// On first enrollment, the client will need to send the verifier to the server,
+// which the server will store as its long term secret. Only a client can
+// compute the verifier as it requires knowledge of x.
 func (s *Srp) Verifier() (*big.Int, error) {
 	if s.isServer {
 		return nil, fmt.Errorf("server may not produce a verifier")
@@ -207,8 +266,15 @@ func (s *Srp) calculateU() (*big.Int, error) {
 }
 
 // SetOthersPublic sets A if server and B if client
-// Caller _must_ check for error status, and abort the session
-// on error.
+// Caller *MUST* check for error status and abort the session
+// on error. This setter will invoke IsPublicValid() and error
+// status must be heeded, as other party may attempt to send
+// a malicious emphemeral public key (A or B).
+//
+// When used by the server, this sets A, when used by the client
+// it sets B. But caller doesn't need to worry about whether this
+// is A or B. Instead the caller just needs to know that they
+// are setting the public ephemeral key received from the other party.
 func (s *Srp) SetOthersPublic(AorB *big.Int) error {
 	if !s.IsPublicValid(AorB) {
 		s.badState = true
@@ -253,6 +319,13 @@ func (s *Srp) makeVerifier() (*big.Int, error) {
 }
 
 // MakeKey creates and returns the session Key
+// Once the ephemeral public key is received from the other party and properly
+// set, Srp should have enough information to compute the session key.
+//
+// If and only if, each party knowns their respective long term secret
+// (x for client, v for server) will both parties compute the same Key.
+// It is up to the caller to test that both client and server have the same
+// key. (A challange back and forth will do the job)
 func (s *Srp) MakeKey() (*big.Int, error) {
 	if s.badState {
 		return nil, fmt.Errorf("we've got bad data")

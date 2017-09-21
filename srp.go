@@ -1,3 +1,29 @@
+/*
+The Secure Remote Password protocol involves a server and a client proving to
+each other that they know (or can derive) their long term secrets.
+The client long term secret is known as "x" and the corresponding server secret,
+the verifier, is known as "v". The verifier is mathematically related to x and is
+computed by the client on first enrollment and transmistted to the server.
+
+Typically, the server will store the verifier and the client will derive x from a user
+secret such as a password. Because the verifier can used like a password hash with
+respect to cracking, the derivation of x should be designed to resist password cracking
+if the verifier compromised.
+
+The client and the server must both use the same Diffie-Hellman group to peform
+their computations.
+
+The server and the client send an ephemeral public key to each other
+(The client sends A; the server sends B)
+With their private knowledge of their own ephemeral secrets (a or b) and their
+private knowledge of x (for the client) and v (for the server) along with public
+knowledge they are able to prove to each other that they know their respective
+secrets and can generate a session key, K, which may be used for further encryption
+during the session.
+
+The guts of how to use this package is through the Srp type.
+
+*/
 package srp
 
 import (
@@ -142,7 +168,6 @@ func init() {
 	KnownGroups["8192"] = g8192
 	// DefaultGroup := g4096
 }
-
 
 // prehash is kept for compatibility with legacy implementations
 func prehash(s string) string {
