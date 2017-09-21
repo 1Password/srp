@@ -287,6 +287,9 @@ func (s *Srp) SetOthersPublic(AorB *big.Int) error {
 	} else {
 		s.ephemeralPublicB.Set(AorB)
 	}
+	if u, err := s.calculateU(); u == nil || err != nil {
+		return fmt.Errorf("failed to calculate u: %s", err)
+	}
 	return nil
 }
 
