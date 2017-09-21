@@ -30,16 +30,6 @@ func Example_serverClientMatch() {
 		fmt.Println("couldn't setup client")
 	}
 
-	vClient, _ := client.Verifier()
-	vString := vClient.String()
-	_ = vString
-	// fmt.Println(vString)
-
-	if vClient.Cmp(v) != 0 {
-		fmt.Printf("v:\n\t%x\n", v.Bytes())
-		fmt.Printf("vClient:\n\t%x\n", vClient.Bytes())
-	}
-
 	// client will need to send its public ephemeral key to server, so let's
 	// get that now.
 	if A = client.EphemeralPublic(); A == nil {
