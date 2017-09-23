@@ -342,5 +342,15 @@ func checkGroup(group Group) error {
 	if z.GCD(nil, nil, group.g, group.N).Cmp(bigOne) != 0 {
 		return errors.New("GCD(g, N) != 1")
 	}
+
+	// is N a safe prime?
+	// Does N = 2q + 1, where q is prime?
+	// This is also an expensive test
+	q := new(big.Int)
+	q.Sub(group.N, bigOne)
+	q.Div(q, big.NewInt(2))
+	if !q.ProbablyPrime(2) {
+		return errors.New("N isn't a safe prime")
+	}
 	return nil
 }
