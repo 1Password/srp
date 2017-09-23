@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/pkg/errors"
 )
 
 // These tests are based on SRP Test Vectors
@@ -307,4 +309,29 @@ func TestBadA(t *testing.T) {
 		t.Error("key created after bad B")
 	}
 
+}
+
+func TestGroups(t *testing.T) {
+	for gName, grp := range KnownGroups {
+		if err := checkGroup(*grp); err != nil {
+			t.Errorf("bad group %s: %s", gName, err)
+		}
+	}
+}
+
+func checkGroup(group Group) error {
+	minGroupSize := 2048 // this needs adjustment
+	if group.N == nil {
+		return errors.New("N not set")
+	}
+	if group.g == nil {
+		return errors.New("g not set")
+	}
+	if group.N.BitLen() < minGroupSize {
+		return errors.New("N too small")
+	}
+	if !group.N.ProbablyPrime(2) {
+		return errors.New("N isn't prime")
+	}
+	return nil
 }
