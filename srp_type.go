@@ -60,8 +60,9 @@ type Srp struct {
 	b5Compatible     bool
 }
 
-// B0 is a BigInt zero
-var B0 = big.NewInt(0)
+// bigZero is a BigInt zero
+var bigZero = big.NewInt(0)
+var bigOne = big.NewInt(1)
 
 /*
 NewSrp creates an Srp object and sets up defaults.
@@ -146,7 +147,7 @@ func (s *Srp) makeA() (*big.Int, error) {
 	if s.isServer {
 		return nil, fmt.Errorf("only the client can make A")
 	}
-	if s.ephemeralPrivate.Cmp(B0) == 0 {
+	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
 		s.ephemeralPrivate = s.generateMySecret()
 	}
 
@@ -168,18 +169,18 @@ func (s *Srp) makeB() (*big.Int, error) {
 	if !s.isServer {
 		return nil, fmt.Errorf("only the server can make B")
 	}
-	if s.v.Cmp(B0) == 0 {
+	if s.v.Cmp(bigZero) == 0 {
 		return nil, fmt.Errorf("k must be known before B can be calculated")
 	}
 
 	// Generatable prerequists: k, b if needed
-	if s.k.Cmp(B0) == 0 {
+	if s.k.Cmp(bigZero) == 0 {
 		var err error
 		if s.k, err = s.makeLittleK(); err != nil {
 			return nil, err
 		}
 	}
-	if s.ephemeralPrivate.Cmp(B0) == 0 {
+	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
 		s.ephemeralPrivate = s.generateMySecret()
 	}
 
@@ -221,7 +222,7 @@ func (s *Srp) IsPublicValid(AorB *big.Int) bool {
 	if s.group == nil {
 		return false
 	}
-	if s.group.g.Cmp(B0) == 0 {
+	if s.group.g.Cmp(bigZero) == 0 {
 		return false
 	}
 
@@ -229,7 +230,7 @@ func (s *Srp) IsPublicValid(AorB *big.Int) bool {
 		return false
 	}
 
-	if result.GCD(nil, nil, AorB, s.group.N).Cmp(big.NewInt(1)) != 0 {
+	if result.GCD(nil, nil, AorB, s.group.N).Cmp(bigOne) != 0 {
 		return false
 	}
 	return true
@@ -298,7 +299,7 @@ func (s *Srp) isUValid() bool {
 		s.u = nil
 		return false
 	}
-	if s.u.Cmp(B0) == 0 {
+	if s.u.Cmp(bigZero) == 0 {
 		return false
 	}
 	return true
@@ -312,7 +313,7 @@ func (s *Srp) makeVerifier() (*big.Int, error) {
 	if s.badState {
 		return nil, fmt.Errorf("we have bad data")
 	}
-	if s.x.Cmp(B0) == 0 {
+	if s.x.Cmp(bigZero) == 0 {
 		return nil, fmt.Errorf("x must be known to calculate v")
 	}
 
@@ -339,7 +340,7 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 	if !s.isUValid() {
 		return nil, fmt.Errorf("u must be known to make Key")
 	}
-	if s.ephemeralPrivate.Cmp(B0) == 0 {
+	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
 		return nil, fmt.Errorf("cannot make Key with my ephemeral secret")
 	}
 

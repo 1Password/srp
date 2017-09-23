@@ -49,6 +49,10 @@ func NewGroup() *Group {
 // KnownGroups is a map from strings to Diffie-Hellman group parameters
 var KnownGroups = make(map[string]*Group)
 
+// MinGroupSize sets a lower bound on the size of DH groups
+// that will pass certain internal checks. Defaults to 2048
+var MinGroupSize = 2048 // this needs adjustment
+
 func init() {
 	g3072 := &Group{g: big.NewInt(2), N: new(big.Int)}
 	g3072.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"+

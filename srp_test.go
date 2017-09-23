@@ -312,6 +312,7 @@ func TestBadA(t *testing.T) {
 }
 
 func TestGroups(t *testing.T) {
+	MinGroupSize = 1024 // We need a 1024 group to test against spec
 	for gName, grp := range KnownGroups {
 		if err := checkGroup(*grp); err != nil {
 			t.Errorf("bad group %s: %s", gName, err)
@@ -320,18 +321,26 @@ func TestGroups(t *testing.T) {
 }
 
 func checkGroup(group Group) error {
-	minGroupSize := 2048 // this needs adjustment
+
 	if group.N == nil {
 		return errors.New("N not set")
 	}
 	if group.g == nil {
 		return errors.New("g not set")
 	}
-	if group.N.BitLen() < minGroupSize {
+	if group.N.BitLen() < MinGroupSize {
 		return errors.New("N too small")
 	}
+	// following test is very slow. Probably best not to run it.
 	if !group.N.ProbablyPrime(2) {
 		return errors.New("N isn't prime")
+	}
+	if group.g.Cmp(big.NewInt(1)) != 1 {
+		return errors.New("g < 2")
+	}
+	z := new(big.Int)
+	if z.GCD(nil, nil, group.g, group.N).Cmp(bigOne) != 0 {
+		return errors.New("GCD(g, N) != 1")
 	}
 	return nil
 }
