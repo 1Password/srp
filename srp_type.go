@@ -57,7 +57,6 @@ type Srp struct {
 	isServer         bool
 	badState         bool
 	secretSize       int // size for generating ephemeral secrets in bytes
-	b5Compatible     bool
 }
 
 // bigZero is a BigInt zero
@@ -70,15 +69,12 @@ NewSrp creates an Srp object and sets up defaults.
 serverSide bool: Use true when creating an Srp object to be used on the server,
 otherwise set false.
 
-b5Compatible bool: Use the same hashing (for creation of u as is used in
-1Password's authentication)
-
 group *Group: Pointer to the Diffie-Hellman group to be used.
 
 xORv *big.Int: Your long term secret, x or v. If you are the client, pass in x.
 If you are the server pass in v.
 */
-func NewSrp(serverSide bool, b5Compatible bool, group *Group, xORv *big.Int) *Srp {
+func NewSrp(serverSide bool, group *Group, xORv *big.Int) *Srp {
 	s := new(Srp)
 
 	// Setting these to Int-zero gives me a useful way to test
@@ -96,7 +92,6 @@ func NewSrp(serverSide bool, b5Compatible bool, group *Group, xORv *big.Int) *Sr
 	s.badState = false
 
 	s.isServer = serverSide
-	s.b5Compatible = b5Compatible
 	s.secretSize = 32 // what RFC 5054 suggests
 
 	s.group.N = s.group.N.Set(group.N)
@@ -248,7 +243,7 @@ func (s *Srp) Verifier() (*big.Int, error) {
 }
 
 // calculateU creates a hash A and B
-// Its behavior depends on whether b5Compatible is set
+// It does not use RFC 5054 compatable hashing
 func (s *Srp) calculateU() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		s.u = nil
@@ -256,12 +251,9 @@ func (s *Srp) calculateU() (*big.Int, error) {
 	}
 
 	h := sha256.New()
-	if s.b5Compatible {
-		h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
-	} else {
-		h.Write(s.ephemeralPublicA.Bytes())
-		h.Write(s.ephemeralPublicB.Bytes())
-	}
+
+	h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
+
 	s.u = NumberFromBytes(h.Sum(nil))
 	return s.u, nil
 }
@@ -373,11 +365,7 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 	s.premasterKey.Exp(b, e, s.group.N)
 
 	h := sha256.New()
-	if s.b5Compatible {
-		h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
-	} else {
-		h.Write(s.premasterKey.Bytes())
-	}
+	h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
 
 	s.Key = NumberFromBytes(h.Sum(nil))
 	return s.Key, nil
