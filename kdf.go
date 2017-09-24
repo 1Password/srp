@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
+	"encoding/base32"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -87,4 +88,17 @@ func CalculateX(method, alg, email, password string, salt []byte, iterations int
 // bytesToHex returns hexadecimal representation of the slice.
 func bytesToHex(b []byte) string {
 	return hex.EncodeToString(b)
+}
+
+// prehash is kept for compatibility with legacy implementations
+func prehash(s string) string {
+	if s == "" {
+		return ""
+	}
+
+	hasher := sha256.New()
+	hasher.Write([]byte(s))
+	bits := hasher.Sum(nil)
+
+	return strings.TrimRight(base32.StdEncoding.EncodeToString(bits), "=")
 }

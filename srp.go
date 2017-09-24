@@ -27,10 +27,7 @@ The guts of how to use this package is through the Srp type.
 package srp
 
 import (
-	"crypto/sha256"
-	"encoding/base32"
 	"math/big"
-	"strings"
 )
 
 // Group has a generator, g, and a modulus, N.
@@ -171,19 +168,6 @@ func init() {
 	KnownGroups["6144"] = g6144
 	KnownGroups["8192"] = g8192
 	// DefaultGroup := g4096
-}
-
-// prehash is kept for compatibility with legacy implementations
-func prehash(s string) string {
-	if s == "" {
-		return ""
-	}
-
-	hasher := sha256.New()
-	hasher.Write([]byte(s))
-	bits := hasher.Sum(nil)
-
-	return strings.TrimRight(base32.StdEncoding.EncodeToString(bits), "=")
 }
 
 // NumberFromBytes converts a byte array to a number

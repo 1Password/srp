@@ -15,6 +15,7 @@ import (
 
 var username = "alice"
 var password = "password123"
+var runVerySlowTests = false // run slow tests on groups?
 
 var expectedX = NumberFromString("0x 94B7555A ABE9127C C58CCF49 93DB6CF8 4D16C124")
 
@@ -317,6 +318,11 @@ func TestGroups(t *testing.T) {
 		if err := checkGroup(*grp); err != nil {
 			t.Errorf("bad group %s: %s", gName, err)
 		}
+		if runVerySlowTests {
+			if err := checkGroupSlow(*grp); err != nil {
+				t.Errorf("suspicious group %s: %s", gName, err)
+			}
+		}
 	}
 }
 
@@ -331,11 +337,7 @@ func checkGroup(group Group) error {
 	if group.N.BitLen() < MinGroupSize {
 		return errors.New("N too small")
 	}
-	// following test is very slow. Probably best not to run it.
-	if !group.N.ProbablyPrime(2) {
-		return errors.New("N isn't prime")
-	}
-	if group.g.Cmp(big.NewInt(1)) != 1 {
+	if group.g.Cmp(bigOne) != 1 {
 		return errors.New("g < 2")
 	}
 	z := new(big.Int)
@@ -343,9 +345,18 @@ func checkGroup(group Group) error {
 		return errors.New("GCD(g, N) != 1")
 	}
 
+	return nil
+}
+
+// These tests are very slow. Several seconds per group
+// Also they do not defend against maliciously crafted groups
+func checkGroupSlow(group Group) error {
+	if !group.N.ProbablyPrime(2) {
+		return errors.New("N isn't prime")
+	}
+
 	// is N a safe prime?
 	// Does N = 2q + 1, where q is prime?
-	// This is also an expensive test
 	q := new(big.Int)
 	q.Sub(group.N, bigOne)
 	q.Div(q, big.NewInt(2))
