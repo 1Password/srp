@@ -38,10 +38,9 @@ A typical use by a server might be something like
 	// You must still prove that both server and client created the same Key.
 
 This still leaves some work outside of what the Srp object provides.
-The key derivation of x is not handled by this object. Nor is the communication
-between client and server. Finally the check that both client and server have
-negotiated the same Key is left outside.
-
+1. The key derivation of x is not handled by this object.
+2. The communication between client and server. 
+3. The check that both client and server have negotiated the same Key is left outside.
 
 */
 type Srp struct {
