@@ -35,7 +35,7 @@ var g1024 = &Group{g: big.NewInt(2), N: NumberFromString("0x EEAF0AB9ADB38DD69C3
 	"FD5138FE8376435B9FC61D2FC0EB06E3")}
 
 func init() {
-	KnownGroups["1024"] = g1024
+	KnownGroups[RFC5054Group1024] = g1024
 }
 
 var expectedA = hexNumberString(
@@ -69,8 +69,8 @@ func TestCalculateClientRawKey(t *testing.T) {
 	k := NumberFromString("4832374a524b354d344e424a584f42434f45544356584a484641")
 	expectedKey := NumberFromString("f6bef3d6fa5a08a849bf61041cd5b3185c16aede851c819a3644fa7e918c4da6")
 
-	groupName := "4096"
-	client := NewSrp(false, KnownGroups[groupName], x)
+	groupID := RFC5054Group4096
+	client := NewSrp(false, KnownGroups[groupID], x)
 	client.ephemeralPrivate = a
 	client.k = k
 	client.makeA()
@@ -96,7 +96,7 @@ func NumberFromString(s string) *big.Int {
 func TestNewSrpClient(t *testing.T) {
 	var err error
 	x := NumberFromString("740299d2306764ad9e87f37cd54179e388fd45c85fea3b030eb425d7adcb2773")
-	s := NewSrp(false, KnownGroups["4096"], x)
+	s := NewSrp(false, KnownGroups[RFC5054Group4096], x)
 
 	expectedV4096 := NumberFromString("d05240ed513a4f267608e64cf2a84f5106741ddbf1435707a84f530207409d7" +
 		"af1e671182f9d77855b61c628df2b8f6ba8e9b6068fbc84fab80b4542f44c666e17358ebffa8d6fb00fd7037a" +
@@ -128,7 +128,7 @@ func TestSrpClient1024(t *testing.T) {
 	var err error
 	var clientV *big.Int
 	x := expectedX
-	s := NewSrp(false, KnownGroups["1024"], x)
+	s := NewSrp(false, KnownGroups[RFC5054Group1024], x)
 
 	if clientV, err = s.Verifier(); err != nil {
 		t.Errorf("couldn't make v: %s", err)
@@ -142,7 +142,7 @@ func TestSrpClient1024(t *testing.T) {
 
 func TestNewSRPAgainstSpec(t *testing.T) {
 	// Given standard SRP test vectors from http://tools.ietf.org/html/rfc5054#appendix-B
-	groupName := "1024"
+	groupID := RFC5054Group1024
 
 	x := NumberFromString("0x 94B7555A ABE9127C C58CCF49 93DB6CF8 4D16C124")
 	v := NumberFromString("0x " +
@@ -178,7 +178,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		"3499B200 210DCC1F 10EB3394 3CD67FC8 8A2F39A4 BE5BEC4E C0A3212D" +
 		"C346D7E4 74B29EDE 8A469FFE CA686E5A")
 
-	server := NewSrp(true, KnownGroups[groupName], v)
+	server := NewSrp(true, KnownGroups[groupID], v)
 
 	var err error
 	var ret *big.Int
@@ -227,7 +227,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 
 	// Now lets compute the key from the client side
 
-	client := NewSrp(false, KnownGroups[groupName], x)
+	client := NewSrp(false, KnownGroups[groupID], x)
 
 	// Our calculation of k is not compatable with RFC5054
 	client.k = k
@@ -259,19 +259,19 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 func TestClientServerMatch(t *testing.T) {
 	var err error
 	var v *big.Int
-	groupName := "4096"
+	groupID := RFC5054Group4096
 
 	xbytes := make([]byte, 32)
 	rand.Read(xbytes)
 	x := NumberFromBytes(xbytes)
 
-	client := NewSrp(false, KnownGroups[groupName], x)
+	client := NewSrp(false, KnownGroups[groupID], x)
 
 	if v, err = client.Verifier(); err != nil {
 		t.Errorf("verifier creation failed: %s", err)
 	}
 
-	server := NewSrp(true, KnownGroups[groupName], v)
+	server := NewSrp(true, KnownGroups[groupID], v)
 
 	server.SetOthersPublic(client.ephemeralPublicA)
 	client.SetOthersPublic(server.ephemeralPublicB)
@@ -296,7 +296,7 @@ func TestBadA(t *testing.T) {
 	rand.Read(xbytes)
 	v := NumberFromBytes(xbytes)
 
-	server := NewSrp(true, KnownGroups["4096"], v)
+	server := NewSrp(true, KnownGroups[RFC5054Group4096], v)
 
 	if err := server.SetOthersPublic(server.group.N); err == nil {
 		t.Error("a bad A was accepted")
@@ -314,13 +314,13 @@ func TestBadA(t *testing.T) {
 
 func TestGroups(t *testing.T) {
 	MinGroupSize = 1024 // We need a 1024 group to test against spec
-	for gName, grp := range KnownGroups {
+	for _, grp := range KnownGroups {
 		if err := checkGroup(*grp); err != nil {
-			t.Errorf("bad group %s: %s", gName, err)
+			t.Errorf("bad group %s: %s", grp.Label, err)
 		}
 		if runVerySlowTests {
 			if err := checkGroupSlow(*grp); err != nil {
-				t.Errorf("suspicious group %s: %s", gName, err)
+				t.Errorf("suspicious group %s: %s", grp.Label, err)
 			}
 		}
 	}

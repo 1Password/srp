@@ -1,4 +1,7 @@
 /*
+
+The guts of how to use this package is through the Srp type.
+
 The Secure Remote Password protocol involves a server and a client proving to
 each other that they know (or can derive) their long term secrets.
 The client long term secret is known as "x" and the corresponding server secret,
@@ -21,8 +24,56 @@ knowledge they are able to prove to each other that they know their respective
 secrets and can generate a session key, K, which may be used for further encryption
 during the session.
 
-The guts of how to use this package is through the Srp type.
+Quoting from http://srp.stanford.edu/design.html (with some modification
+for KDF)
 
+    Names and notation
+	N    A large safe prime (N = 2q+1, where q is prime)
+	     All arithmetic is done modulo N.
+  	g    A generator modulo N
+  	k    Multiplier parameter (k = H(N, g) in SRP-6a, k = 3 for legacy SRP-6)
+  	H()  One-way hash function
+  	^    (Modular) Exponentiation
+  	u    Random scrambling parameter
+  	a,b  Secret ephemeral values
+  	A,B  Public ephemeral values
+  	x    Long term client secret (derived via KDF)
+	v    Long term server Verifier
+	s    Salt for key derivation function
+	I    User identifiers (username, account ID, etc)
+	KDF()    Key Derivation Function
+
+    The authentication protocol itself goes as follows
+
+	User -> Host:  I, A = g^a                  (identifies self, a = random number)
+	Host -> User:  s, B = kv + g^b             (sends salt, b = random number)
+
+	Both:  u = H(A, B)
+
+	User:  x = KDF(s, ...)             (user derives x)
+	User:  S = (B - kg^x) ^ (a + ux)   (computes raw session key)
+	User:  K = H(S)                    (computes session key)
+
+	Host:  S = (Av^u) ^ b              (computes raw session key)
+	Host:  K = H(S)                    (computes session key)
+
+    Now the two parties have a shared, strong session key K.
+    To complete authentication, they need to prove to each other that their keys match.
+
+This package does not address the actual communication between client and
+server. But through the Srp type it not only performs the calculations needed,
+it also performs safety and sanity checks on its input, and it hides everything
+from the caller except what the caller absolutely needs to provide.
+
+The key derivation function, KDF()
+
+	v is computed by client via KDF, user secrets, and random salt, s.
+
+	x = KDF(...)
+	v = g^x
+
+	v is sent to the server on first enrollment.
+	The server then keeps {I, s, v} in its database.
 */
 package srp
 
@@ -31,8 +82,10 @@ import (
 )
 
 // Group has a generator, g, and a modulus, N.
+// Silly golang capitialization rules have the modulus exported and the generator filtered.
 type Group struct {
-	g, N *big.Int
+	g, N  *big.Int
+	Label string
 }
 
 // NewGroup creates and initializes a an SRP group
@@ -40,18 +93,32 @@ func NewGroup() *Group {
 	r := new(Group)
 	r.g = new(big.Int)
 	r.N = new(big.Int)
+	r.Label = ""
 	return r
 }
 
+// RFC5054 groups are listed by their numbers in Appendix A of the RFC
+const (
+	// The values correspond to the numbering in Appendix A of RFC5054
+	// so note using iota mechanism for numbering here.
+	RFC5054Group1024 = 1 // We won't allow this group
+	RFC5054Group1536 = 2 // We aren't going to allow this one either
+	RFC5054Group2048 = 3
+	RFC5054Group3072 = 4
+	RFC5054Group4096 = 5
+	RFC5054Group6144 = 6
+	RFC5054Group8192 = 7
+)
+
 // KnownGroups is a map from strings to Diffie-Hellman group parameters
-var KnownGroups = make(map[string]*Group)
+var KnownGroups = make(map[int]*Group)
 
 // MinGroupSize sets a lower bound on the size of DH groups
 // that will pass certain internal checks. Defaults to 2048
 var MinGroupSize = 2048 // this needs adjustment
 
 func init() {
-	g3072 := &Group{g: big.NewInt(2), N: new(big.Int)}
+	g3072 := &Group{g: big.NewInt(2), N: new(big.Int), Label: "5054A3072"}
 	g3072.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"+
 		"29024E088A67CC74020BBEA63B139B22514A08798E3404DD"+
 		"EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"+
@@ -70,7 +137,7 @@ func init() {
 		"43DB5BFCE0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF", 16)
 
 	// RFC 3526 id 16
-	g4096 := &Group{g: big.NewInt(5), N: new(big.Int)}
+	g4096 := &Group{g: big.NewInt(5), N: new(big.Int), Label: "5054A4096"}
 	g4096.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -92,7 +159,7 @@ func init() {
 		"FFFFFFFFFFFFFFFF", 16)
 
 	// RFC 3526 group id 17
-	g6144 := &Group{g: big.NewInt(5), N: new(big.Int)}
+	g6144 := &Group{g: big.NewInt(5), N: new(big.Int), Label: "5054A6144"}
 	g6144.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -123,7 +190,7 @@ func init() {
 		"6DCC4024FFFFFFFFFFFFFFFF", 16)
 
 	// RFC 3526 group id 18
-	g8192 := &Group{g: big.NewInt(19), N: new(big.Int)}
+	g8192 := &Group{g: big.NewInt(19), N: new(big.Int), Label: "5054A8192"}
 	g8192.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -163,10 +230,10 @@ func init() {
 		"60C980DD98EDD3DFFFFFFFFFFFFFFFFF", 16)
 
 	// KnownGroups = make(map[string]*Group)
-	KnownGroups["3027"] = g3072
-	KnownGroups["4096"] = g4096
-	KnownGroups["6144"] = g6144
-	KnownGroups["8192"] = g8192
+	KnownGroups[RFC5054Group3072] = g3072
+	KnownGroups[RFC5054Group4096] = g4096
+	KnownGroups[RFC5054Group6144] = g6144
+	KnownGroups[RFC5054Group8192] = g8192
 	// DefaultGroup := g4096
 }
 

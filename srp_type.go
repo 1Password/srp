@@ -22,7 +22,7 @@ to set those.
 
 A typical use by a server might be something like
 
-	server := NewSrp(true, true, KnownGroups["4096"], v)
+	server := NewSrp(true, true, KnownGroups[RFC5054Group4096], v)
 
 	A := getAfromYourClientConnection(...) // your code
 	if result, err := server.SetOthersPublic(A); result == nil || err != nil {

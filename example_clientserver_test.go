@@ -17,7 +17,7 @@ func Example_serverClientMatch() {
 	var err error
 	var A, B *big.Int
 
-	group := KnownGroups["4096"]
+	group := KnownGroups[RFC5054Group4096]
 
 	// client x would normally be derived from some KDF or stored locally long term on client system, but we are just
 	x := NumberFromString("740299d2306764ad9e87f37cd54179e388fd45c85fea3b030eb425d7adcb2773")
