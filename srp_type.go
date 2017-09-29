@@ -39,7 +39,7 @@ A typical use by a server might be something like
 
 This still leaves some work outside of what the Srp object provides.
 1. The key derivation of x is not handled by this object.
-2. The communication between client and server. 
+2. The communication between client and server.
 3. The check that both client and server have negotiated the same Key is left outside.
 
 */
@@ -115,7 +115,10 @@ func NewSrp(serverSide bool, group *Group, xORv *big.Int) *Srp {
 
 // generateMySecret creates the little a or b
 func (s *Srp) generateMySecret() *big.Int {
-	s.ephemeralPrivate = s.random()
+	bytes := make([]byte, s.secretSize)
+	rand.Read(bytes)
+	bytes[0] |= 0x80 // set leading bit to 1
+	s.ephemeralPrivate = NumberFromBytes(bytes)
 	return s.ephemeralPrivate
 }
 
@@ -369,11 +372,4 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 	s.Key = NumberFromBytes(h.Sum(nil))
 	return s.Key, nil
 
-}
-
-func (s *Srp) random() *big.Int {
-	bytes := make([]byte, s.secretSize)
-	rand.Read(bytes)
-
-	return NumberFromBytes(bytes)
 }
