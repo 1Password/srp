@@ -117,7 +117,6 @@ func NewSrp(serverSide bool, group *Group, xORv *big.Int) *Srp {
 func (s *Srp) generateMySecret() *big.Int {
 	bytes := make([]byte, s.secretSize)
 	rand.Read(bytes)
-	bytes[0] |= 0x80 // set leading bit to 1
 	s.ephemeralPrivate = NumberFromBytes(bytes)
 	return s.ephemeralPrivate
 }
