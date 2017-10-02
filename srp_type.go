@@ -55,7 +55,6 @@ type Srp struct {
 	Key              *big.Int // H(premasterKey)
 	isServer         bool
 	badState         bool
-	secretSize       int // size for generating ephemeral secrets in bytes
 }
 
 // bigZero is a BigInt zero
@@ -91,10 +90,13 @@ func NewSrp(serverSide bool, group *Group, xORv *big.Int) *Srp {
 	s.badState = false
 
 	s.isServer = serverSide
-	s.secretSize = 32 // what RFC 5054 suggests
 
+	// Q: Why am I copying the group, instead of just using setting pointers?
+	// A: Because every time I try to do it the "right" way bad things happen.
 	s.group.N = s.group.N.Set(group.N)
 	s.group.g = s.group.g.Set(group.g)
+	s.group.Label = group.Label
+	s.group.ExponentSize = group.ExponentSize
 
 	if s.isServer {
 		s.v.Set(xORv)
@@ -114,8 +116,18 @@ func NewSrp(serverSide bool, group *Group, xORv *big.Int) *Srp {
 }
 
 // generateMySecret creates the little a or b
+// According to RFC5054, this should be at least 32 bytes
+// According to RFC2631 this should be uniform in the range
+// [2, q-2], where q is the Sofie Germain prime from which
+// N was created.
+// According to RFC3526 §8 there are some specific sizes depending
+// on the group. We go with RFC3526 values if available, otherwise
+// a minimum of 32 bytes.
+
 func (s *Srp) generateMySecret() *big.Int {
-	bytes := make([]byte, s.secretSize)
+
+	eSize := max(s.group.ExponentSize, MinExponentSize)
+	bytes := make([]byte, eSize)
 	rand.Read(bytes)
 	s.ephemeralPrivate = NumberFromBytes(bytes)
 	return s.ephemeralPrivate

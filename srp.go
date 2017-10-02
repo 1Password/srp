@@ -82,10 +82,14 @@ import (
 )
 
 // Group has a generator, g, and a modulus, N.
+// Also a Label or name that the group can call itself
+// Recommended ExponentSize (in bytes) is based on the
+// lower estimates given in section 8 of RFC3526
 // Silly golang capitialization rules have the modulus exported and the generator filtered.
 type Group struct {
-	g, N  *big.Int
-	Label string
+	g, N         *big.Int
+	Label        string
+	ExponentSize int // RFC 3526 §8
 }
 
 // NewGroup creates and initializes a an SRP group
@@ -113,12 +117,19 @@ const (
 // KnownGroups is a map from strings to Diffie-Hellman group parameters
 var KnownGroups = make(map[int]*Group)
 
-// MinGroupSize sets a lower bound on the size of DH groups
+// MinGroupSize (in bits) sets a lower bound on the size of DH groups
 // that will pass certain internal checks. Defaults to 2048
-var MinGroupSize = 2048 // this needs adjustment
+var MinGroupSize = 2048
+
+// MinExponentSize (in bytes) for generating ephemeral private keys
+var MinExponentSize = 32
 
 func init() {
-	g3072 := &Group{g: big.NewInt(5), N: new(big.Int), Label: "5054A3072"}
+	g3072 := &Group{
+		g:            big.NewInt(5),
+		N:            new(big.Int),
+		Label:        "5054A3072",
+		ExponentSize: 32}
 	g3072.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"+
 		"29024E088A67CC74020BBEA63B139B22514A08798E3404DD"+
 		"EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"+
@@ -137,7 +148,11 @@ func init() {
 		"43DB5BFCE0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF", 16)
 
 	// RFC 3526 id 16
-	g4096 := &Group{g: big.NewInt(5), N: new(big.Int), Label: "5054A4096"}
+	g4096 := &Group{
+		g:            big.NewInt(5),
+		N:            new(big.Int),
+		Label:        "5054A4096",
+		ExponentSize: 38}
 	g4096.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -159,7 +174,11 @@ func init() {
 		"FFFFFFFFFFFFFFFF", 16)
 
 	// RFC 3526 group id 17
-	g6144 := &Group{g: big.NewInt(5), N: new(big.Int), Label: "5054A6144"}
+	g6144 := &Group{
+		g:            big.NewInt(5),
+		N:            new(big.Int),
+		Label:        "5054A6144",
+		ExponentSize: 43}
 	g6144.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -190,7 +209,11 @@ func init() {
 		"6DCC4024FFFFFFFFFFFFFFFF", 16)
 
 	// RFC 3526 group id 18
-	g8192 := &Group{g: big.NewInt(19), N: new(big.Int), Label: "5054A8192"}
+	g8192 := &Group{
+		g:            big.NewInt(19),
+		N:            new(big.Int),
+		Label:        "5054A8192",
+		ExponentSize: 48}
 	g8192.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -246,4 +269,13 @@ func NumberFromBytes(bytes []byte) *big.Int {
 	}
 
 	return result
+}
+
+// max of two integers
+// (because go doesn't give me "a > b ? a : b" )
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
