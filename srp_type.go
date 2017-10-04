@@ -93,7 +93,7 @@ func NewSrp(serverSide bool, group *Group, xORv *big.Int) *Srp {
 
 	// Q: Why am I copying the group, instead of just using setting pointers?
 	// A: Because every time I try to do it the "right" way bad things happen.
-	s.group.N = s.group.N.Set(group.N)
+	s.group.n = s.group.n.Set(group.n)
 	s.group.g = s.group.g.Set(group.g)
 	s.group.Label = group.Label
 	s.group.ExponentSize = group.ExponentSize
@@ -141,7 +141,7 @@ func (s *Srp) makeLittleK() (*big.Int, error) {
 		return nil, fmt.Errorf("group not set")
 	}
 	h := sha256.New()
-	h.Write(s.group.N.Bytes())
+	h.Write(s.group.n.Bytes())
 	h.Write(s.group.g.Bytes())
 	s.k = NumberFromBytes(h.Sum(nil))
 	return s.k, nil
@@ -160,7 +160,7 @@ func (s *Srp) makeA() (*big.Int, error) {
 	}
 
 	s.ephemeralPublicA = new(big.Int)
-	result := s.ephemeralPublicA.Exp(s.group.g, s.ephemeralPrivate, s.group.N)
+	result := s.ephemeralPublicA.Exp(s.group.g, s.ephemeralPrivate, s.group.n)
 	return result, nil
 }
 
@@ -193,11 +193,11 @@ func (s *Srp) makeB() (*big.Int, error) {
 	}
 
 	// B = kv + g^b  (term1 is kv, term2 is g^b)
-	term2.Exp(s.group.g, s.ephemeralPrivate, s.group.N)
+	term2.Exp(s.group.g, s.ephemeralPrivate, s.group.n)
 	term1.Mul(s.k, s.v)
-	term1.Mod(term1, s.group.N) // We can work with smaller numbers through modular reduction
+	term1.Mod(term1, s.group.n) // We can work with smaller numbers through modular reduction
 	s.ephemeralPublicB.Add(term1, term2)
-	s.ephemeralPublicB.Mod(s.ephemeralPublicB, s.group.N) // more modular reduction
+	s.ephemeralPublicB.Mod(s.ephemeralPublicB, s.group.n) // more modular reduction
 
 	return s.ephemeralPublicB, nil
 }
@@ -234,11 +234,11 @@ func (s *Srp) IsPublicValid(AorB *big.Int) bool {
 		return false
 	}
 
-	if result.Mod(AorB, s.group.N); result.Sign() == 0 {
+	if result.Mod(AorB, s.group.n); result.Sign() == 0 {
 		return false
 	}
 
-	if result.GCD(nil, nil, AorB, s.group.N).Cmp(bigOne) != 0 {
+	if result.GCD(nil, nil, AorB, s.group.n).Cmp(bigOne) != 0 {
 		return false
 	}
 	return true
@@ -322,7 +322,7 @@ func (s *Srp) makeVerifier() (*big.Int, error) {
 		return nil, fmt.Errorf("x must be known to calculate v")
 	}
 
-	result := s.v.Exp(s.group.g, s.x, s.group.N)
+	result := s.v.Exp(s.group.g, s.x, s.group.n)
 
 	return result, nil
 }
@@ -357,7 +357,7 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 		if s.v == nil || s.ephemeralPublicA == nil {
 			return nil, fmt.Errorf("not enough is known to create Key")
 		}
-		b.Exp(s.v, s.u, s.group.N)
+		b.Exp(s.v, s.u, s.group.n)
 		b.Mul(b, s.ephemeralPublicA)
 		e = s.ephemeralPrivate
 
@@ -369,13 +369,13 @@ func (s *Srp) MakeKey() (*big.Int, error) {
 		e.Mul(s.u, s.x)
 		e.Add(e, s.ephemeralPrivate)
 
-		b.Exp(s.group.g, s.x, s.group.N)
+		b.Exp(s.group.g, s.x, s.group.n)
 		b.Mul(b, s.k)
 		b.Sub(s.ephemeralPublicB, b)
-		b.Mod(b, s.group.N)
+		b.Mod(b, s.group.n)
 	}
 
-	s.premasterKey.Exp(b, e, s.group.N)
+	s.premasterKey.Exp(b, e, s.group.n)
 
 	h := sha256.New()
 	h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))

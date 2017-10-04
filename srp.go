@@ -85,9 +85,10 @@ import (
 // Also a Label or name that the group can call itself
 // Recommended ExponentSize (in bytes) is based on the
 // lower estimates given in section 8 of RFC3526
-// Silly golang capitialization rules have the modulus exported and the generator filtered.
+// Silly golang capitialization rules mean I have
+// to call "N" something else to prevent export
 type Group struct {
-	g, N         *big.Int
+	g, n         *big.Int
 	Label        string
 	ExponentSize int // RFC 3526 §8
 }
@@ -96,9 +97,19 @@ type Group struct {
 func NewGroup() *Group {
 	r := new(Group)
 	r.g = new(big.Int)
-	r.N = new(big.Int)
+	r.n = new(big.Int)
 	r.Label = ""
 	return r
+}
+
+// N returns the modulus of the the group
+func (g *Group) N() *big.Int {
+	return g.n
+}
+
+// Generator returns little g, the generator for the group as a big int
+func (g *Group) Generator() *big.Int {
+	return g.g
 }
 
 // RFC5054 groups are listed by their numbers in Appendix A of the RFC
@@ -127,10 +138,10 @@ var MinExponentSize = 32
 func init() {
 	g3072 := &Group{
 		g:            big.NewInt(5),
-		N:            new(big.Int),
+		n:            new(big.Int),
 		Label:        "5054A3072",
 		ExponentSize: 32}
-	g3072.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"+
+	g3072.n.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"+
 		"29024E088A67CC74020BBEA63B139B22514A08798E3404DD"+
 		"EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"+
 		"E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"+
@@ -150,10 +161,10 @@ func init() {
 	// RFC 3526 id 16
 	g4096 := &Group{
 		g:            big.NewInt(5),
-		N:            new(big.Int),
+		n:            new(big.Int),
 		Label:        "5054A4096",
 		ExponentSize: 38}
-	g4096.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
+	g4096.n.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
 		"A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"+
@@ -176,10 +187,10 @@ func init() {
 	// RFC 3526 group id 17
 	g6144 := &Group{
 		g:            big.NewInt(5),
-		N:            new(big.Int),
+		n:            new(big.Int),
 		Label:        "5054A6144",
 		ExponentSize: 43}
-	g6144.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
+	g6144.n.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
 		"A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"+
@@ -211,10 +222,10 @@ func init() {
 	// RFC 3526 group id 18
 	g8192 := &Group{
 		g:            big.NewInt(19),
-		N:            new(big.Int),
+		n:            new(big.Int),
 		Label:        "5054A8192",
 		ExponentSize: 48}
-	g8192.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
+	g8192.n.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
 		"A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"+

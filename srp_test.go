@@ -26,7 +26,7 @@ var expectedVerifier = hexNumberString(
 
 var a = hexNumberString("60975527 035CF2AD 1989806F 0407210B C81EDC04 E2762A56 AFD529DD DA2D4393")
 
-var g1024 = &Group{g: big.NewInt(2), N: NumberFromString("0x EEAF0AB9ADB38DD69C33F80AFA8FC5E86072618775FF3C0B9EA2314C" +
+var g1024 = &Group{g: big.NewInt(2), n: NumberFromString("0x EEAF0AB9ADB38DD69C33F80AFA8FC5E86072618775FF3C0B9EA2314C" +
 	"9C256576D674DF7496EA81D3383B4813D692C6E0E0D5D8E250B98BE4" +
 	"8E495C1D6089DAD15DC7D7B46154D6B6CE8EF4AD69B15D4982559B29" +
 	"7BCF1885C529F566660E57EC68EDBC3C05726CC02FD4CBF4976EAA9A" +
@@ -296,7 +296,7 @@ func TestBadA(t *testing.T) {
 
 	server := NewSrp(true, KnownGroups[RFC5054Group4096], v)
 
-	if err := server.SetOthersPublic(server.group.N); err == nil {
+	if err := server.SetOthersPublic(server.group.n); err == nil {
 		t.Error("a bad A was accepted")
 	}
 
@@ -326,20 +326,20 @@ func TestGroups(t *testing.T) {
 
 func checkGroup(group Group) error {
 
-	if group.N == nil {
+	if group.n == nil {
 		return errors.New("N not set")
 	}
 	if group.g == nil {
 		return errors.New("g not set")
 	}
-	if group.N.BitLen() < MinGroupSize {
+	if group.n.BitLen() < MinGroupSize {
 		return errors.New("N too small")
 	}
 	if group.g.Cmp(bigOne) != 1 {
 		return errors.New("g < 2")
 	}
 	z := new(big.Int)
-	if z.GCD(nil, nil, group.g, group.N).Cmp(bigOne) != 0 {
+	if z.GCD(nil, nil, group.g, group.n).Cmp(bigOne) != 0 {
 		return errors.New("GCD(g, N) != 1")
 	}
 
@@ -349,14 +349,14 @@ func checkGroup(group Group) error {
 // These tests are very slow. Several seconds per group
 // Also they do not defend against maliciously crafted groups
 func checkGroupSlow(group Group) error {
-	if !group.N.ProbablyPrime(2) {
+	if !group.n.ProbablyPrime(2) {
 		return errors.New("N isn't prime")
 	}
 
 	// is N a safe prime?
 	// Does N = 2q + 1, where q is prime?
 	q := new(big.Int)
-	q.Sub(group.N, bigOne)
+	q.Sub(group.n, bigOne)
 	q.Div(q, big.NewInt(2))
 	if !q.ProbablyPrime(2) {
 		return errors.New("N isn't a safe prime")
