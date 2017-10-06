@@ -1,11 +1,5 @@
 package srp
 
-import (
-	"encoding/base64"
-	"math/big"
-	"testing"
-)
-
 var r5054username = "alice"
 var r5054password = "password123"
 
@@ -53,25 +47,5 @@ Derived Combined Secret Key = 5b401cd715a53a0f2bb27de5554c2dde94d72680ac924094c5
 
 */
 
-func TestComputeX(t *testing.T) {
-
-	var ak *AccountKey
-	var err error
-	var x, expectedX *big.Int
-
-	if ak, err = NewAccountKeyFromString(kh.sk); ak == nil || err != nil {
-		t.Errorf("Couldn't construct Secret Key: %s", err)
-	}
-
-	salt, _ := base64.RawURLEncoding.DecodeString(kh.saltB64)
-	if x, err = CalculateX(kh.method, kh.alg, kh.email, kh.mp, salt, kh.iterations, ak); x == nil || err != nil {
-		t.Errorf("Couldn't calculate x: %s", err)
-	}
-
-	expectedX, _ = new(big.Int).SetString(kh.expectedXhex, 16)
-
-	if x.Cmp(expectedX) != 0 {
-		t.Errorf("Calcuated x: %s\nExpected x: %s\n", x, expectedX)
-	}
-
-}
+/* We don't have anything to test.
+ */
