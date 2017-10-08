@@ -210,9 +210,8 @@ func (s *Srp) makeB() (*big.Int, error) {
 func (s *Srp) EphemeralPublic() *big.Int {
 	if s.isServer {
 		return s.ephemeralPublicB
-	} else {
-		return s.ephemeralPublicA
 	}
+	return s.ephemeralPublicA
 }
 
 // IsPublicValid checks to see whether public A or B is valid within the group

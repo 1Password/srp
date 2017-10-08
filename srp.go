@@ -1,4 +1,6 @@
 /*
+Package srp is intented to provide an interface for the computations
+needed for the Secure Remote Password protocal (version 6a).
 
 The guts of how to use this package is through the Srp type.
 
