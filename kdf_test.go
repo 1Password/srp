@@ -2,6 +2,8 @@ package srp
 
 var r5054username = "alice"
 var r5054password = "password123"
+var r5054salt = "BEB25379 D1A8581E B5A72767 3A2441EE"
+var r5054ExpectedX = "94B7555A ABE9127C C58CCF49 93DB6CF8 4D16C124"
 
 type kdfTestVector struct {
 	sk           string

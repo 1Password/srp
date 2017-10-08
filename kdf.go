@@ -1,20 +1,72 @@
 package srp
 
 import (
-	"crypto/sha256"
-	"encoding/base32"
+	"crypto/sha1"
+	"math/big"
 	"strings"
+	"unicode"
+
+	"golang.org/x/text/unicode/norm"
 )
 
-// prehash is kept for compatibility with legacy implementations
-func prehash(s string) string {
-	if s == "" {
-		return ""
+/*
+ * Best to use KDF from github/agilebits/op/cryto
+ * I will import at some point
+ */
+
+/*
+KdfRfc5054 is *not* recommended. Instead use a KDF that
+involes a hashing scheme designed for password hashing.
+The SRP verifier that is stored by the server is like
+a password hash with respect to crackability. Choose a KDF
+that that makes the server stored verifiers hard to crack.
+
+This computes the client's long term secret, x
+from  a username, password, and salt as described
+in RFC5054 §2.6, which says
+    x = SHA1(s | SHA1(I | ":" | P))
+**/
+func KdfRfc5054(salt []byte, username string, password string) (x *big.Int) {
+
+	p := []byte(PreparePassword(password))
+
+	u := []byte(PreparePassword(username))
+
+	innerHasher := sha1.New()
+	innerHasher.Write(u)
+	innerHasher.Write([]byte(":"))
+	innerHasher.Write(p)
+	ih := innerHasher.Sum(nil)
+
+	oHasher := sha1.New()
+	oHasher.Write(salt)
+	oHasher.Write(ih)
+
+	h := oHasher.Sum(nil)
+	x = BigIntFromBytes(h)
+	return x
+}
+
+// BigIntFromBytes converts a byte array to a number
+func BigIntFromBytes(bytes []byte) *big.Int {
+	result := new(big.Int)
+	for _, b := range bytes {
+		result.Lsh(result, 8)
+		result.Add(result, big.NewInt(int64(b)))
 	}
+	return result
+}
 
-	hasher := sha256.New()
-	hasher.Write([]byte(s))
-	bits := hasher.Sum(nil)
-
-	return strings.TrimRight(base32.StdEncoding.EncodeToString(bits), "=")
+// PreparePassword strips leading and trailing white space
+// and normalizes to unicode NFKD
+func PreparePassword(s string) string {
+	var out string
+	// step #1: normalize `NFKD`
+	out = string(norm.NFKD.Bytes([]byte(s)))
+	// step #2: trim left
+	out = strings.TrimLeftFunc(out, unicode.IsSpace)
+	// step #3: trim right
+	out = strings.TrimRightFunc(out, unicode.IsSpace)
+	// step #4: return the result
+	return out
 }
