@@ -1,9 +1,35 @@
 package srp
 
-var r5054username = "alice"
-var r5054password = "password123"
-var r5054salt = "BEB25379 D1A8581E B5A72767 3A2441EE"
-var r5054ExpectedX = "94B7555A ABE9127C C58CCF49 93DB6CF8 4D16C124"
+import (
+	"strings"
+	"testing"
+)
+
+type rfc5054TestVector struct {
+	I         string
+	P         string
+	salt      string
+	expectedX string
+}
+
+var aliceVector = rfc5054TestVector{
+	I:         "alice",
+	P:         "password123",
+	salt:      "BEB25379 D1A8581E B5A72767 3A2441EE",
+	expectedX: "94B7555A ABE9127C C58CCF49 93DB6CF8 4D16C124",
+}
+
+func TestKdfRFC5054(t *testing.T) {
+	vec := aliceVector
+	expX := NumberFromString(vec.expectedX)
+	s := []byte(strings.Replace(vec.salt, " ", "", -1))
+
+	x := KdfRfc5054(s, vec.I, vec.P)
+	if expX.Cmp(x) != 0 {
+		t.Error("didn't derive correct x")
+	}
+
+}
 
 type kdfTestVector struct {
 	sk           string
