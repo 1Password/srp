@@ -1,6 +1,7 @@
 package srp
 
 import (
+	"encoding/hex"
 	"strings"
 	"testing"
 )
@@ -22,7 +23,8 @@ var aliceVector = rfc5054TestVector{
 func TestKdfRFC5054(t *testing.T) {
 	vec := aliceVector
 	expX := NumberFromString(vec.expectedX)
-	s := []byte(strings.Replace(vec.salt, " ", "", -1))
+	vec.salt = strings.Replace(vec.salt, " ", "", -1)
+	s, _ := hex.DecodeString(vec.salt)
 
 	x := KdfRfc5054(s, vec.I, vec.P)
 	if expX.Cmp(x) != 0 {
