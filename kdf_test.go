@@ -20,6 +20,10 @@ var aliceVector = rfc5054TestVector{
 	expectedX: "94B7555A ABE9127C C58CCF49 93DB6CF8 4D16C124",
 }
 
+// TestKdfRFC5054 only tests the key derivation function in Appendix B of 5054.
+// That is, it is only about getting the x value from the
+// salt, username, and password. TestNewSRPAgainstSpec() does further testing
+// on computations given the derived x
 func TestKdfRFC5054(t *testing.T) {
 	vec := aliceVector
 	expX := NumberFromString(vec.expectedX)
