@@ -1,7 +1,5 @@
 package srp
 
-import "math/big"
-
 /*
 Package srp is intended to provide an interface for the computations
 needed for the Secure Remote Password protocal (version 6a).
@@ -81,23 +79,3 @@ The key derivation function, KDF()
 	v is sent to the server on first enrollment.
 	The server then keeps {I, s, v} in its database.
 */
-
-// NumberFromBytes converts a byte array to a number
-func NumberFromBytes(bytes []byte) *big.Int {
-	result := new(big.Int)
-	for _, b := range bytes {
-		result.Lsh(result, 8)
-		result.Add(result, big.NewInt(int64(b)))
-	}
-
-	return result
-}
-
-// max of two integers
-// (because go doesn't give me "a > b ? a : b" )
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
