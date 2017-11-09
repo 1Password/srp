@@ -73,30 +73,33 @@ xORv *big.Int: Your long term secret, x or v. If you are the client, pass in x.
 If you are the server pass in v.
 */
 func NewSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
-	s := new(SRP)
 
-	// Setting these to Int-zero gives me a useful way to test
-	// if these have been properly set later
-	s.ephemeralPublicA = big.NewInt(0)
-	s.ephemeralPrivate = big.NewInt(0)
-	s.ephemeralPublicB = big.NewInt(0)
-	s.u = big.NewInt(0)
-	s.k = big.NewInt(0)
-	s.x = big.NewInt(0)
-	s.v = big.NewInt(0)
-	s.premasterKey = big.NewInt(0)
-	s.Key = big.NewInt(0)
-	s.group = NewGroup()
-	s.badState = false
+	// Goldberg Q: Why am I copying the group, instead of just using setting pointers?
+	// Goldber A: Because every time I try to do it the "right" way bad things happen.
+	sGroup := &Group{
+		n:            group.n,
+		g:            group.g,
+		Label:        group.Label,
+		ExponentSize: group.ExponentSize,
+	}
 
-	s.isServer = serverSide
+	s := &SRP{
+		// Setting these to Int-zero gives me a useful way to test
+		// if these have been properly set later
+		ephemeralPublicA: big.NewInt(0),
+		ephemeralPrivate: big.NewInt(0),
+		ephemeralPublicB: big.NewInt(0),
+		u:                big.NewInt(0),
+		k:                big.NewInt(0),
+		x:                big.NewInt(0),
+		v:                big.NewInt(0),
+		premasterKey:     big.NewInt(0),
+		Key:              big.NewInt(0),
+		group:            sGroup,
+		badState:         false,
 
-	// Q: Why am I copying the group, instead of just using setting pointers?
-	// A: Because every time I try to do it the "right" way bad things happen.
-	s.group.n = s.group.n.Set(group.n)
-	s.group.g = s.group.g.Set(group.g)
-	s.group.Label = group.Label
-	s.group.ExponentSize = group.ExponentSize
+		isServer: serverSide,
+	}
 
 	if s.isServer {
 		s.v.Set(xORv)
@@ -159,7 +162,7 @@ func (s *SRP) makeA() (*big.Int, error) {
 		s.ephemeralPrivate = s.generateMySecret()
 	}
 
-	s.ephemeralPublicA = new(big.Int)
+	s.ephemeralPublicA = &big.Int{}
 	result := s.ephemeralPublicA.Exp(s.group.g, s.ephemeralPrivate, s.group.n)
 	return result, nil
 }
@@ -167,8 +170,8 @@ func (s *SRP) makeA() (*big.Int, error) {
 // makeB calculates B (if necessary) and returms it
 func (s *SRP) makeB() (*big.Int, error) {
 
-	term1 := new(big.Int)
-	term2 := new(big.Int)
+	term1 := &big.Int{}
+	term2 := &big.Int{}
 
 	// Absolute Prerequisits: Group, isServer, v
 	if s.group == nil {
@@ -348,8 +351,8 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 		return nil, fmt.Errorf("cannot make Key with my ephemeral secret")
 	}
 
-	b := new(big.Int) // base
-	e := new(big.Int) // exponent
+	b := &big.Int{} // base
+	e := &big.Int{} // exponent
 
 	if s.isServer {
 		// S = (Av^u) ^ b

@@ -18,11 +18,10 @@ type Group struct {
 
 // NewGroup creates and initializes a an SRP group
 func NewGroup() *Group {
-	r := new(Group)
-	r.g = new(big.Int)
-	r.n = new(big.Int)
-	r.Label = ""
-	return r
+	return &Group{
+		g: &big.Int{},
+		n: &big.Int{},
+	}
 }
 
 // N returns the modulus of the the group
