@@ -81,16 +81,6 @@ func TestCalculateClientRawKey(t *testing.T) {
 	}
 }
 
-// NumberFromString converts a string to a number
-func NumberFromString(s string) *big.Int {
-	n := strings.Replace(s, " ", "", -1)
-
-	result := new(big.Int)
-	result.SetString(strings.TrimPrefix(n, "0x"), 16)
-
-	return result
-}
-
 func TestNewSRPClient(t *testing.T) {
 	var err error
 	x := NumberFromString("740299d2306764ad9e87f37cd54179e388fd45c85fea3b030eb425d7adcb2773")

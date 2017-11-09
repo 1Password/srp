@@ -1,6 +1,9 @@
 package srp
 
-import "math/big"
+import (
+	"math/big"
+	"strings"
+)
 
 // NumberFromBytes converts a byte array to a number
 func NumberFromBytes(bytes []byte) *big.Int {
@@ -29,5 +32,15 @@ func BigIntFromBytes(bytes []byte) *big.Int {
 		result.Lsh(result, 8)
 		result.Add(result, big.NewInt(int64(b)))
 	}
+	return result
+}
+
+// NumberFromString converts a string to a number
+func NumberFromString(s string) *big.Int {
+	n := strings.Replace(s, " ", "", -1)
+
+	result := new(big.Int)
+	result.SetString(strings.TrimPrefix(n, "0x"), 16)
+
 	return result
 }
