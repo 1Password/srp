@@ -43,7 +43,7 @@ func KdfRfc5054(salt []byte, username string, password string) (x *big.Int) {
 	oHasher.Write(ih)
 
 	h := oHasher.Sum(nil)
-	x = BigIntFromBytes(h)
+	x = bigIntFromBytes(h)
 	return x
 }
 

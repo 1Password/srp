@@ -48,7 +48,7 @@ func hexNumberString(s string) *big.Int {
 	if err != nil {
 		panic(err)
 	}
-	return NumberFromBytes(result)
+	return numberFromBtyes(result)
 }
 
 // Auth contains information on the type of auth used
@@ -264,7 +264,7 @@ func TestClientServerMatch(t *testing.T) {
 
 	xbytes := make([]byte, 32)
 	rand.Read(xbytes)
-	x := NumberFromBytes(xbytes)
+	x := numberFromBtyes(xbytes)
 
 	client := NewSRP(false, KnownGroups[groupID], x)
 
@@ -297,7 +297,7 @@ func TestClientServerMatch(t *testing.T) {
 func TestBadA(t *testing.T) {
 	xbytes := make([]byte, 32)
 	rand.Read(xbytes)
-	v := NumberFromBytes(xbytes)
+	v := numberFromBtyes(xbytes)
 
 	server := NewSRP(true, KnownGroups[RFC5054Group4096], v)
 

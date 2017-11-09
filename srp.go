@@ -207,7 +207,7 @@ func (s *SRP) generateMySecret() *big.Int {
 	eSize := max(s.group.ExponentSize, MinExponentSize)
 	bytes := make([]byte, eSize)
 	rand.Read(bytes)
-	s.ephemeralPrivate = NumberFromBytes(bytes)
+	s.ephemeralPrivate = numberFromBtyes(bytes)
 	return s.ephemeralPrivate
 }
 
@@ -224,7 +224,7 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 	h := sha256.New()
 	h.Write(s.group.n.Bytes())
 	h.Write(s.group.g.Bytes())
-	s.k = NumberFromBytes(h.Sum(nil))
+	s.k = numberFromBtyes(h.Sum(nil))
 	return s.k, nil
 }
 
@@ -351,7 +351,7 @@ func (s *SRP) calculateU() (*big.Int, error) {
 
 	h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
 
-	s.u = NumberFromBytes(h.Sum(nil))
+	s.u = numberFromBtyes(h.Sum(nil))
 	return s.u, nil
 }
 
@@ -470,7 +470,7 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 	h := sha256.New()
 	h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
 
-	s.Key = NumberFromBytes(h.Sum(nil))
+	s.Key = numberFromBtyes(h.Sum(nil))
 	return s.Key, nil
 
 }
@@ -506,6 +506,6 @@ func (s *SRP) SetKFromHex(kstr string) (k *big.Int, err error) {
 // in the creation of K. Input is a byte slice that will be converted
 // to a big Int. This saves the caller from having to import math/big
 func (s *SRP) SetKFromBytes(bytes []byte) (k *big.Int, err error) {
-	k = BigIntFromBytes(bytes)
+	k = bigIntFromBytes(bytes)
 	return s.SetK(k)
 }
