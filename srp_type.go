@@ -8,13 +8,13 @@ import (
 )
 
 /*
-Srp provides the primary interface to this package.
+SRP provides the primary interface to this package.
 
 Because many of the inputs require checks against malicious data, many are set using
 setters instead of being public/exported in the type. This is to ensure that bad
 values do not get used.
 
-Creating the Srp object with with NewSrp() takes care of generating your ephemeral
+Creating the SRP object with with NewSRP() takes care of generating your ephemeral
 secret (a or b depending on whether you are a client or server), your public
 ephemeral key (A or B depending on whether you are a client or server),
 the multiplier k. (There is a setter for k if you wish to use a different scheme
@@ -22,7 +22,7 @@ to set those.
 
 A typical use by a server might be something like
 
-	server := NewSrp(true, true, KnownGroups[RFC5054Group4096], v)
+	server := NewSRP(true, true, KnownGroups[RFC5054Group4096], v)
 
 	A := getAfromYourClientConnection(...) // your code
 	if result, err := server.SetOthersPublic(A); result == nil || err != nil {
@@ -37,13 +37,13 @@ A typical use by a server might be something like
 
 	// You must still prove that both server and client created the same Key.
 
-This still leaves some work outside of what the Srp object provides.
+This still leaves some work outside of what the SRP object provides.
 1. The key derivation of x is not handled by this object.
 2. The communication between client and server.
 3. The check that both client and server have negotiated the same Key is left outside.
 
 */
-type Srp struct {
+type SRP struct {
 	group            *Group
 	ephemeralPrivate *big.Int // Little a or little b (ephemeral secrets)
 	ephemeralPublicA *big.Int // Public A
@@ -62,9 +62,9 @@ var bigZero = big.NewInt(0)
 var bigOne = big.NewInt(1)
 
 /*
-NewSrp creates an Srp object and sets up defaults.
+NewSRP creates an SRP object and sets up defaults.
 
-serverSide bool: Use true when creating an Srp object to be used on the server,
+serverSide bool: Use true when creating an SRP object to be used on the server,
 otherwise set false.
 
 group *Group: Pointer to the Diffie-Hellman group to be used.
@@ -72,8 +72,8 @@ group *Group: Pointer to the Diffie-Hellman group to be used.
 xORv *big.Int: Your long term secret, x or v. If you are the client, pass in x.
 If you are the server pass in v.
 */
-func NewSrp(serverSide bool, group *Group, xORv *big.Int) *Srp {
-	s := new(Srp)
+func NewSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
+	s := new(SRP)
 
 	// Setting these to Int-zero gives me a useful way to test
 	// if these have been properly set later
@@ -124,7 +124,7 @@ func NewSrp(serverSide bool, group *Group, xORv *big.Int) *Srp {
 // on the group. We go with RFC3526 values if available, otherwise
 // a minimum of 32 bytes.
 
-func (s *Srp) generateMySecret() *big.Int {
+func (s *SRP) generateMySecret() *big.Int {
 
 	eSize := max(s.group.ExponentSize, MinExponentSize)
 	bytes := make([]byte, eSize)
@@ -136,7 +136,7 @@ func (s *Srp) generateMySecret() *big.Int {
 // makeLittleK initializes multiplier based on group paramaters
 // k = H(N, g)
 // This does _not_ confirm to RFC5054 padding
-func (s *Srp) makeLittleK() (*big.Int, error) {
+func (s *SRP) makeLittleK() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
@@ -148,7 +148,7 @@ func (s *Srp) makeLittleK() (*big.Int, error) {
 }
 
 // makeA calculates A (if necessary) and returns it
-func (s *Srp) makeA() (*big.Int, error) {
+func (s *SRP) makeA() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
@@ -165,7 +165,7 @@ func (s *Srp) makeA() (*big.Int, error) {
 }
 
 // makeB calculates B (if necessary) and returms it
-func (s *Srp) makeB() (*big.Int, error) {
+func (s *SRP) makeB() (*big.Int, error) {
 
 	term1 := new(big.Int)
 	term2 := new(big.Int)
@@ -207,7 +207,7 @@ func (s *Srp) makeB() (*big.Int, error) {
 // If you are a server, you will need to send B to the client.
 // But this abstracts away from user needing to keep A and B straight. Caller
 // just needs to send EphemeralPublic() to the other party.
-func (s *Srp) EphemeralPublic() *big.Int {
+func (s *SRP) EphemeralPublic() *big.Int {
 	if s.isServer {
 		return s.ephemeralPublicB
 	}
@@ -219,7 +219,7 @@ func (s *Srp) EphemeralPublic() *big.Int {
 // The server can do mildly bad things by sending a malicious B to the client.
 // This method is public in case the user wishes to check those values earlier than
 // than using SetOthersPublic(), which also performs this check.
-func (s *Srp) IsPublicValid(AorB *big.Int) bool {
+func (s *SRP) IsPublicValid(AorB *big.Int) bool {
 
 	result := big.Int{}
 	// There are three ways to fail.
@@ -247,7 +247,7 @@ func (s *Srp) IsPublicValid(AorB *big.Int) bool {
 // On first enrollment, the client will need to send the verifier to the server,
 // which the server will store as its long term secret. Only a client can
 // compute the verifier as it requires knowledge of x.
-func (s *Srp) Verifier() (*big.Int, error) {
+func (s *SRP) Verifier() (*big.Int, error) {
 	if s.isServer {
 		return nil, fmt.Errorf("server may not produce a verifier")
 	}
@@ -256,7 +256,7 @@ func (s *Srp) Verifier() (*big.Int, error) {
 
 // calculateU creates a hash A and B
 // It does not use RFC 5054 compatable hashing
-func (s *Srp) calculateU() (*big.Int, error) {
+func (s *SRP) calculateU() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		s.u = nil
 		return nil, fmt.Errorf("both A and B must be known to calculate u")
@@ -280,7 +280,7 @@ func (s *Srp) calculateU() (*big.Int, error) {
 // it sets B. But caller doesn't need to worry about whether this
 // is A or B. Instead the caller just needs to know that they
 // are setting the public ephemeral key received from the other party.
-func (s *Srp) SetOthersPublic(AorB *big.Int) error {
+func (s *SRP) SetOthersPublic(AorB *big.Int) error {
 	if !s.IsPublicValid(AorB) {
 		s.badState = true
 		s.Key = nil
@@ -298,7 +298,7 @@ func (s *Srp) SetOthersPublic(AorB *big.Int) error {
 	return nil
 }
 
-func (s *Srp) isUValid() bool {
+func (s *SRP) isUValid() bool {
 	if s.u == nil || s.badState {
 		s.u = nil
 		return false
@@ -310,7 +310,7 @@ func (s *Srp) isUValid() bool {
 }
 
 // makeVerifier creates to the verifier from x and paramebers
-func (s *Srp) makeVerifier() (*big.Int, error) {
+func (s *SRP) makeVerifier() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
@@ -328,13 +328,13 @@ func (s *Srp) makeVerifier() (*big.Int, error) {
 
 // MakeKey creates and returns the session Key
 // Once the ephemeral public key is received from the other party and properly
-// set, Srp should have enough information to compute the session key.
+// set, SRP should have enough information to compute the session key.
 //
 // If and only if, each party knowns their respective long term secret
 // (x for client, v for server) will both parties compute the same Key.
 // It is up to the caller to test that both client and server have the same
 // key. (A challange back and forth will do the job)
-func (s *Srp) MakeKey() (*big.Int, error) {
+func (s *SRP) MakeKey() (*big.Int, error) {
 	if s.badState {
 		return nil, fmt.Errorf("we've got bad data")
 	}
