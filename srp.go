@@ -8,10 +8,41 @@ import (
 )
 
 /*
-Package srp is intended to provide an interface for the computations
-needed for the Secure Remote Password protocal (version 6a).
+SRP provides the primary interface to this package.
 
-The guts of how to use this package is through the SRP type.
+Because many of the inputs require checks against malicious data, many are set using
+setters instead of being public/exported in the type. This is to ensure that bad
+values do not get used.
+
+Creating the SRP object with with NewSRP() takes care of generating your ephemeral
+secret (a or b depending on whether you are a client or server), your public
+ephemeral key (A or B depending on whether you are a client or server),
+the multiplier k. (There is a setter for k if you wish to use a different scheme
+to set those.
+
+A typical use by a server might be something like
+
+	server := NewSRP(true, true, KnownGroups[RFC5054Group4096], v)
+
+	A := getAfromYourClientConnection(...) // your code
+	if result, err := server.SetOthersPublic(A); result == nil || err != nil {
+		// client sent a malicious A. Kill this session now
+	}
+
+	sendBtoClientSomehow(server.EphemeralPublic())
+
+	if sessionKey, err := server.MakeKey(); sessionKey == nil || err != nil {
+		// something went wrong
+	}
+
+	// You must still prove that both server and client created the same Key.
+
+This still leaves some work outside of what the SRP object provides.
+1. The key derivation of x is not handled by this object.
+2. The communication between client and server.
+3. The check that both client and server have negotiated the same Key is left outside.
+
+The SRP protocol
 
 The Secure Remote Password protocol involves a server and a client proving to
 each other that they know (or can derive) their long term secrets.
