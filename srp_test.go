@@ -181,7 +181,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		t.Error("A miracle: k meets 5054 expected value")
 	}
 
-	if ret, err = server.SetK(kbytes); err != nil {
+	if ret, err = server.SetKFromBytes(kbytes); err != nil {
 		t.Errorf("SetK failed: %s", err)
 	}
 	if k.Cmp(server.k) != 0 {
@@ -229,7 +229,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	client := NewSRP(false, KnownGroups[groupID], x)
 
 	// Our calculation of k is not compatable with RFC5054
-	client.SetK(kbytes)
+	client.SetKFromBytes(kbytes)
 	client.ephemeralPrivate = a
 	if ret, err = client.makeA(); err != nil {
 		t.Errorf("MakeA failed: %s", err)

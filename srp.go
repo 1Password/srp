@@ -217,6 +217,10 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
+	// Only make k if it hasn't already been set
+	if s.k.Cmp(bigZero) != 0 {
+		return s.k, nil
+	}
 	h := sha256.New()
 	h.Write(s.group.n.Bytes())
 	h.Write(s.group.g.Bytes())
@@ -463,9 +467,33 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 
 // SetK sets the multiplier k if we do not derive it internally ala 5054.
 // This is particularly useful for 1Password, where we use the SessionID
+// in the creation of K.
+func (s *SRP) SetK(k *big.Int) (*big.Int, error) {
+	if k == nil || k.Cmp(bigZero) == 0 {
+		return nil, fmt.Errorf("SRP failed to set multiplier k")
+	}
+	s.k.Set(k)
+	return s.k, nil
+}
+
+// SetKFromHex sets the multiplier k if we do not derive it internally ala 5054.
+// This is particularly useful for 1Password, where we use the SessionID
+// in the creation of K. Input is a hex string that will be converted
+// to a big Int. This saves the caller from having to import math/big
+func (s *SRP) SetKFromHex(kstr string) (k *big.Int, err error) {
+	k = NumberFromString(kstr)
+	if k == nil || k.Cmp(bigZero) == 0 {
+		return nil, fmt.Errorf("SRP failed to set multiplier k")
+	}
+	s.k.Set(k)
+	return s.k, nil
+}
+
+// SetKFromBytes sets the multiplier k if we do not derive it internally ala 5054.
+// This is particularly useful for 1Password, where we use the SessionID
 // in the creation of K. Input is a byte slice that will be converted
 // to a big Int. This saves the caller from having to import math/big
-func (s *SRP) SetK(bytes []byte) (k *big.Int, err error) {
+func (s *SRP) SetKFromBytes(bytes []byte) (k *big.Int, err error) {
 	k = BigIntFromBytes(bytes)
 	if k == nil || k.Cmp(bigZero) == 0 {
 		return nil, fmt.Errorf("SRP failed to set multiplier k")
