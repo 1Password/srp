@@ -467,9 +467,9 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 // to a big Int. This saves the caller from having to import math/big
 func (s *SRP) SetK(bytes []byte) (k *big.Int, err error) {
 	k = BigIntFromBytes(bytes)
-	if k == nil or k.Cmp(bigZero) {
+	if k == nil || k.Cmp(bigZero) == 0 {
 		return nil, fmt.Errorf("SRP failed to set multiplier k")
 	}
 	s.k.Set(k)
-	return s.k
+	return s.k, nil
 }
