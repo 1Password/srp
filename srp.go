@@ -6,7 +6,7 @@ import "math/big"
 Package srp is intended to provide an interface for the computations
 needed for the Secure Remote Password protocal (version 6a).
 
-The guts of how to use this package is through the Srp type.
+The guts of how to use this package is through the SRP type.
 
 The Secure Remote Password protocol involves a server and a client proving to
 each other that they know (or can derive) their long term secrets.
@@ -67,7 +67,7 @@ for KDF)
     To complete authentication, they need to prove to each other that their keys match.
 
 This package does not address the actual communication between client and
-server. But through the Srp type it not only performs the calculations needed,
+server. But through the SRP type it not only performs the calculations needed,
 it also performs safety and sanity checks on its input, and it hides everything
 from the caller except what the caller absolutely needs to provide.
 
