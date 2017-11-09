@@ -94,7 +94,7 @@ Because many of the inputs require checks against malicious data, many are set u
 setters instead of being public/exported in the type. This is to ensure that bad
 values do not get used.
 
-Creating the SRP object with with NewSRP() takes care of generating your ephemeral
+Creating the SRP object with with NewSRPServer()/NewSRPClient() takes care of generating your ephemeral
 secret (a or b depending on whether you are a client or server), your public
 ephemeral key (A or B depending on whether you are a client or server),
 the multiplier k. (There is a setter for k if you wish to use a different scheme
@@ -102,7 +102,7 @@ to set those.
 
 A typical use by a server might be something like
 
-	server := NewSRP(true, true, KnownGroups[RFC5054Group4096], v)
+	server := NewSRPServer(KnownGroups[RFC5054Group4096], v)
 
 	A := getAfromYourClientConnection(...) // your code
 	if result, err := server.SetOthersPublic(A); result == nil || err != nil {
@@ -141,6 +141,14 @@ type SRP struct {
 var bigZero = big.NewInt(0)
 var bigOne = big.NewInt(1)
 
+func NewSRPClient(group *Group, x *big.Int) *SRP {
+	return newSRP(false, group, x)
+}
+
+func NewSRPServer(group *Group, v *big.Int) *SRP {
+	return newSRP(true, group, v)
+}
+
 /*
 NewSRP creates an SRP object and sets up defaults.
 
@@ -152,7 +160,7 @@ group *Group: Pointer to the Diffie-Hellman group to be used.
 xORv *big.Int: Your long term secret, x or v. If you are the client, pass in x.
 If you are the server pass in v.
 */
-func NewSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
+func newSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
 
 	// Goldberg Q: Why am I copying the group, instead of just using setting pointers?
 	// Goldber A: Because every time I try to do it the "right" way bad things happen.

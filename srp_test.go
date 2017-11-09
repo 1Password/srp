@@ -68,7 +68,7 @@ func TestCalculateClientRawKey(t *testing.T) {
 	expectedKey := NumberFromString("f6bef3d6fa5a08a849bf61041cd5b3185c16aede851c819a3644fa7e918c4da6")
 
 	groupID := RFC5054Group4096
-	client := NewSRP(false, KnownGroups[groupID], x)
+	client := NewSRPClient(KnownGroups[groupID], x)
 	client.ephemeralPrivate = a
 	client.k = k
 	client.makeA()
@@ -94,7 +94,7 @@ func NumberFromString(s string) *big.Int {
 func TestNewSRPClient(t *testing.T) {
 	var err error
 	x := NumberFromString("740299d2306764ad9e87f37cd54179e388fd45c85fea3b030eb425d7adcb2773")
-	s := NewSRP(false, KnownGroups[RFC5054Group4096], x)
+	s := NewSRPClient(KnownGroups[RFC5054Group4096], x)
 
 	expectedV4096 := NumberFromString("d05240ed513a4f267608e64cf2a84f5106741ddbf1435707a84f530207409d7" +
 		"af1e671182f9d77855b61c628df2b8f6ba8e9b6068fbc84fab80b4542f44c666e17358ebffa8d6fb00fd7037a" +
@@ -126,7 +126,7 @@ func TestSRPClient1024(t *testing.T) {
 	var err error
 	var clientV *big.Int
 	x := expectedX
-	s := NewSRP(false, KnownGroups[RFC5054Group1024], x)
+	s := NewSRPClient(KnownGroups[RFC5054Group1024], x)
 
 	if clientV, err = s.Verifier(); err != nil {
 		t.Errorf("couldn't make v: %s", err)
@@ -179,7 +179,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		"3499B200 210DCC1F 10EB3394 3CD67FC8 8A2F39A4 BE5BEC4E C0A3212D" +
 		"C346D7E4 74B29EDE 8A469FFE CA686E5A")
 
-	server := NewSRP(true, KnownGroups[groupID], v)
+	server := NewSRPClient(KnownGroups[groupID], v)
 
 	var err error
 	var ret *big.Int
@@ -228,7 +228,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 
 	// Now lets compute the key from the client side
 
-	client := NewSRP(false, KnownGroups[groupID], x)
+	client := NewSRPClient(KnownGroups[groupID], x)
 
 	// Our calculation of k is not compatable with RFC5054
 	client.k = k
@@ -266,13 +266,13 @@ func TestClientServerMatch(t *testing.T) {
 	rand.Read(xbytes)
 	x := NumberFromBytes(xbytes)
 
-	client := NewSRP(false, KnownGroups[groupID], x)
+	client := NewSRPClient(KnownGroups[groupID], x)
 
 	if v, err = client.Verifier(); err != nil {
 		t.Errorf("verifier creation failed: %s", err)
 	}
 
-	server := NewSRP(true, KnownGroups[groupID], v)
+	server := NewSRPServer(KnownGroups[groupID], v)
 
 	server.SetOthersPublic(client.ephemeralPublicA)
 	client.SetOthersPublic(server.ephemeralPublicB)
@@ -297,7 +297,7 @@ func TestBadA(t *testing.T) {
 	rand.Read(xbytes)
 	v := NumberFromBytes(xbytes)
 
-	server := NewSRP(true, KnownGroups[RFC5054Group4096], v)
+	server := NewSRPServer(KnownGroups[RFC5054Group4096], v)
 
 	if err := server.SetOthersPublic(server.group.n); err == nil {
 		t.Error("a bad A was accepted")
