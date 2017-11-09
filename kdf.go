@@ -15,7 +15,7 @@ import (
  */
 
 /*
-KdfRfc5054 is *not* recommended. Instead use a KDF that
+KDFRFC5054 is *not* recommended. Instead use a KDF that
 involes a hashing scheme designed for password hashing.
 The SRP verifier that is stored by the server is like
 a password hash with respect to crackability. Choose a KDF
@@ -26,7 +26,7 @@ from  a username, password, and salt as described
 in RFC5054 §2.6, which says
     x = SHA1(s | SHA1(I | ":" | P))
 **/
-func KdfRfc5054(salt []byte, username string, password string) (x *big.Int) {
+func KDFRFC5054(salt []byte, username string, password string) (x *big.Int) {
 
 	p := []byte(PreparePassword(password))
 

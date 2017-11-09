@@ -140,7 +140,7 @@ func TestSRPClient1024(t *testing.T) {
 
 // TestNewSRPAgainstSpec tests against Appendix B of rfc5054.
 // This test does not include the derivation of x, which is in
-// TestKdfRFC5054
+// TestKDFRFC5054
 func TestNewSRPAgainstSpec(t *testing.T) {
 	// Given standard SRP test vectors from http://tools.ietf.org/html/rfc5054#appendix-B
 	groupID := RFC5054Group1024

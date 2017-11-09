@@ -30,7 +30,7 @@ func TestKdfRFC5054(t *testing.T) {
 	vec.salt = strings.Replace(vec.salt, " ", "", -1)
 	s, _ := hex.DecodeString(vec.salt)
 
-	x := KdfRfc5054(s, vec.I, vec.P)
+	x := KDFRFC5054(s, vec.I, vec.P)
 	if expX.Cmp(x) != 0 {
 		t.Error("didn't derive correct x")
 	}
