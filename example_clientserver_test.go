@@ -1,6 +1,7 @@
 package srp
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -11,11 +12,21 @@ func Example_serverClientMatch() {
 	// This example has both a server and the corresponding client live
 	// in the same function. That is not something you would normally do.
 	// Normally, you would be running one side (client or server) only.
-	// If I understand channels better, I coupd probably set up a more
+	// If I understand channels better, I could probably set up a more
 	// realistic example.
 
 	var err error
 	var A, B *big.Int
+
+	// In this example, the client and the server will both manually
+	// set the value for instead of this being calculated internally.
+	// k doesn't need to be secret, but it should be different from
+	// session to session, and the client and server need the same one.
+	khex := "7556AA045AEF2CDD07ABAF0F665C3E818913186F"
+	k, _ := hex.DecodeString(khex)
+	// to allow me to declare without using
+	_ = khex
+	_ = k
 
 	group := KnownGroups[RFC5054Group4096]
 
@@ -51,6 +62,12 @@ func Example_serverClientMatch() {
 		log.Fatal(err)
 	}
 
+	// If manually setting k, server must do so early
+	if _, err = server.SetKFromHex(khex); err != nil {
+		fmt.Println(err)
+		log.Fatal(err)
+	}
+
 	// server can now make the key.
 	serverKey, err := server.MakeKey()
 	if err != nil || serverKey == nil {
@@ -71,6 +88,7 @@ func Example_serverClientMatch() {
 		log.Fatal(err)
 	}
 
+	client.SetKFromHex(khex)
 	// client can now make the session key
 	clientKey, err := client.MakeKey()
 	if err != nil || clientKey == nil {

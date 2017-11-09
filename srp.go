@@ -118,17 +118,18 @@ The key derivation function, KDF()
 	The server then keeps {I, s, v} in its database.
 */
 type SRP struct {
-	group            *Group
-	ephemeralPrivate *big.Int // Little a or little b (ephemeral secrets)
-	ephemeralPublicA *big.Int // Public A
-	ephemeralPublicB *big.Int // Public A and B ephemeral values
-	x, v             *big.Int // x and verifier (long term secrets)
-	u                *big.Int // calculated scrambling parameter
-	k                *big.Int // multiplier parameter
-	premasterKey     *big.Int // unhashed derived session secret
-	Key              *big.Int // H(premasterKey)
-	isServer         bool
-	badState         bool
+	group             *Group
+	ephemeralPrivate  *big.Int // Little a or little b (ephemeral secrets)
+	ephemeralPublicA  *big.Int // Public A
+	ephemeralPublicB  *big.Int // Public A and B ephemeral values
+	x, v              *big.Int // x and verifier (long term secrets)
+	u                 *big.Int // calculated scrambling parameter
+	k                 *big.Int // multiplier parameter
+	premasterKey      *big.Int // unhashed derived session secret
+	Key               *big.Int // H(premasterKey)
+	isServer          bool
+	badState          bool
+	hasBBeenRequested bool
 }
 
 // bigZero is a BigInt zero
@@ -160,17 +161,18 @@ func NewSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
 	s := &SRP{
 		// Setting these to Int-zero gives me a useful way to test
 		// if these have been properly set later
-		ephemeralPublicA: big.NewInt(0),
-		ephemeralPrivate: big.NewInt(0),
-		ephemeralPublicB: big.NewInt(0),
-		u:                big.NewInt(0),
-		k:                big.NewInt(0),
-		x:                big.NewInt(0),
-		v:                big.NewInt(0),
-		premasterKey:     big.NewInt(0),
-		Key:              big.NewInt(0),
-		group:            sGroup,
-		badState:         false,
+		ephemeralPublicA:  big.NewInt(0),
+		ephemeralPrivate:  big.NewInt(0),
+		ephemeralPublicB:  big.NewInt(0),
+		u:                 big.NewInt(0),
+		k:                 big.NewInt(0),
+		x:                 big.NewInt(0),
+		v:                 big.NewInt(0),
+		premasterKey:      big.NewInt(0),
+		Key:               big.NewInt(0),
+		group:             sGroup,
+		badState:          false,
+		hasBBeenRequested: false,
 
 		isServer: serverSide,
 	}
@@ -188,7 +190,6 @@ func NewSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
 	} else {
 		s.makeA()
 	}
-
 	return s
 }
 
@@ -217,10 +218,9 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
-	// Only make k if it hasn't already been set
-	if s.k.Cmp(bigZero) != 0 {
-		return s.k, nil
-	}
+
+	// We will remake k, even if already created, as server needs to
+	// remake it after manually setting k
 	h := sha256.New()
 	h.Write(s.group.n.Bytes())
 	h.Write(s.group.g.Bytes())
@@ -245,7 +245,7 @@ func (s *SRP) makeA() (*big.Int, error) {
 	return result, nil
 }
 
-// makeB calculates B (if necessary) and returms it
+// makeB calculates B and returms it
 func (s *SRP) makeB() (*big.Int, error) {
 
 	term1 := &big.Int{}
@@ -259,7 +259,7 @@ func (s *SRP) makeB() (*big.Int, error) {
 		return nil, fmt.Errorf("only the server can make B")
 	}
 	if s.v.Cmp(bigZero) == 0 {
-		return nil, fmt.Errorf("k must be known before B can be calculated")
+		return nil, fmt.Errorf("v must be known before B can be calculated")
 	}
 
 	// Generatable prerequists: k, b if needed
@@ -290,8 +290,12 @@ func (s *SRP) makeB() (*big.Int, error) {
 // just needs to send EphemeralPublic() to the other party.
 func (s *SRP) EphemeralPublic() *big.Int {
 	if s.isServer {
+		s.hasBBeenRequested = true
+		// Always remake B as k may have been reset since last time B was generated
+		s.makeB()
 		return s.ephemeralPublicB
 	}
+	s.makeA()
 	return s.ephemeralPublicA
 }
 
@@ -373,9 +377,6 @@ func (s *SRP) SetOthersPublic(AorB *big.Int) error {
 	} else {
 		s.ephemeralPublicB.Set(AorB)
 	}
-	if u, err := s.calculateU(); u == nil || err != nil {
-		return fmt.Errorf("failed to calculate u: %s", err)
-	}
 	return nil
 }
 
@@ -423,7 +424,9 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 		return nil, fmt.Errorf("group not set")
 	}
 	if !s.isUValid() {
-		return nil, fmt.Errorf("u must be known to make Key")
+		if u, err := s.calculateU(); u == nil || err != nil {
+			return nil, fmt.Errorf("failed to calculate u: %s", err)
+		}
 	}
 	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
 		return nil, fmt.Errorf("cannot make Key with my ephemeral secret")
@@ -433,6 +436,13 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 	e := &big.Int{} // exponent
 
 	if s.isServer {
+
+		// unfortanate trickery to force certain orders of calls
+		if !s.hasBBeenRequested {
+			if s.EphemeralPublic() == nil {
+				return nil, fmt.Errorf("Problem requesting B when making key")
+			}
+		}
 		// S = (Av^u) ^ b
 		if s.v == nil || s.ephemeralPublicA == nil {
 			return nil, fmt.Errorf("not enough is known to create Key")
@@ -472,7 +482,13 @@ func (s *SRP) SetK(k *big.Int) (*big.Int, error) {
 	if k == nil || k.Cmp(bigZero) == 0 {
 		return nil, fmt.Errorf("SRP failed to set multiplier k")
 	}
+	if s.hasBBeenRequested {
+		return s.k, fmt.Errorf("Don't set k after you have gotten B")
+	}
 	s.k.Set(k)
+	if s.isServer {
+		s.makeB()
+	}
 	return s.k, nil
 }
 
@@ -482,11 +498,7 @@ func (s *SRP) SetK(k *big.Int) (*big.Int, error) {
 // to a big Int. This saves the caller from having to import math/big
 func (s *SRP) SetKFromHex(kstr string) (k *big.Int, err error) {
 	k = NumberFromString(kstr)
-	if k == nil || k.Cmp(bigZero) == 0 {
-		return nil, fmt.Errorf("SRP failed to set multiplier k")
-	}
-	s.k.Set(k)
-	return s.k, nil
+	return s.SetK(k)
 }
 
 // SetKFromBytes sets the multiplier k if we do not derive it internally ala 5054.
@@ -495,9 +507,5 @@ func (s *SRP) SetKFromHex(kstr string) (k *big.Int, err error) {
 // to a big Int. This saves the caller from having to import math/big
 func (s *SRP) SetKFromBytes(bytes []byte) (k *big.Int, err error) {
 	k = BigIntFromBytes(bytes)
-	if k == nil || k.Cmp(bigZero) == 0 {
-		return nil, fmt.Errorf("SRP failed to set multiplier k")
-	}
-	s.k.Set(k)
-	return s.k, nil
+	return s.SetK(k)
 }

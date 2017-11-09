@@ -234,15 +234,17 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	if ret, err = client.makeA(); err != nil {
 		t.Errorf("MakeA failed: %s", err)
 	}
-	if ret.Cmp(client.ephemeralPublicA) != 0 {
+	if ret.Cmp(client.EphemeralPublic()) != 0 {
 		t.Error("A does not equal A (nobody tell Ayn Rand)")
 	}
 
-	if client.ephemeralPublicA.Cmp(A) != 0 {
+	if client.EphemeralPublic().Cmp(A) != 0 {
 		t.Error("A is incorrect")
 	}
 
-	client.ephemeralPublicB = B
+	if err = client.SetOthersPublic(B); err != nil {
+		t.Errorf("client couldn't set B: %s", err)
+	}
 	if ret, err = client.calculateU(); err != nil {
 		t.Errorf("calculated client u failed: %s", err)
 	}
@@ -272,8 +274,10 @@ func TestClientServerMatch(t *testing.T) {
 
 	server := NewSRP(true, KnownGroups[groupID], v)
 
-	server.SetOthersPublic(client.ephemeralPublicA)
-	client.SetOthersPublic(server.ephemeralPublicB)
+	A := client.EphemeralPublic()
+	B := server.EphemeralPublic()
+	server.SetOthersPublic(A)
+	client.SetOthersPublic(B)
 
 	server.MakeKey()
 	client.MakeKey()
