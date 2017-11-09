@@ -460,3 +460,16 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 	return s.Key, nil
 
 }
+
+// SetK sets the multiplier k if we do not derive it internally ala 5054.
+// This is particularly useful for 1Password, where we use the SessionID
+// in the creation of K. Input is a byte slice that will be converted
+// to a big Int. This saves the caller from having to import math/big
+func (s *SRP) SetK(bytes []byte) (k *big.Int, err error) {
+	k = BigIntFromBytes(bytes)
+	if k == nil or k.Cmp(bigZero) {
+		return nil, fmt.Errorf("SRP failed to set multiplier k")
+	}
+	s.k.Set(k)
+	return s.k
+}
