@@ -153,6 +153,8 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		"EA53D15C 1AFF87B2 B9DA6E04 E058AD51 CC72BFC9 033B564E 26480D78" +
 		"E955A5E2 9E7AB245 DB2BE315 E2099AFB")
 	k := NumberFromString("0x 7556AA04 5AEF2CDD 07ABAF0F 665C3E81 8913186F")
+	kstr := "7556AA045AEF2CDD07ABAF0F665C3E818913186F"
+	kbytes, _ := hex.DecodeString(kstr)
 
 	a := NumberFromString("0x 60975527 035CF2AD 1989806F 0407210B C81EDC04 E2762A56 AFD529DD DA2D4393")
 	A := NumberFromString("0x " +
@@ -189,7 +191,13 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		t.Error("A miracle: k meets 5054 expected value")
 	}
 
-	server.k = k
+	if ret, err = server.SetK(kbytes); err != nil {
+		t.Errorf("SetK failed: %s", err)
+	}
+	if k.Cmp(server.k) != 0 {
+		t.Error("k does not equal k")
+	}
+
 	server.ephemeralPrivate = b
 
 	if ret, err = server.makeB(); err != nil {
@@ -231,7 +239,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	client := NewSRP(false, KnownGroups[groupID], x)
 
 	// Our calculation of k is not compatable with RFC5054
-	client.k = k
+	client.SetK(kbytes)
 	client.ephemeralPrivate = a
 	if ret, err = client.makeA(); err != nil {
 		t.Errorf("MakeA failed: %s", err)
