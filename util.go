@@ -21,3 +21,13 @@ func max(a, b int) int {
 	}
 	return b
 }
+
+// BigIntFromBytes converts a byte array to a number
+func BigIntFromBytes(bytes []byte) *big.Int {
+	result := new(big.Int)
+	for _, b := range bytes {
+		result.Lsh(result, 8)
+		result.Add(result, big.NewInt(int64(b)))
+	}
+	return result
+}

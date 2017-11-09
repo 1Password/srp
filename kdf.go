@@ -47,16 +47,6 @@ func KdfRfc5054(salt []byte, username string, password string) (x *big.Int) {
 	return x
 }
 
-// BigIntFromBytes converts a byte array to a number
-func BigIntFromBytes(bytes []byte) *big.Int {
-	result := new(big.Int)
-	for _, b := range bytes {
-		result.Lsh(result, 8)
-		result.Add(result, big.NewInt(int64(b)))
-	}
-	return result
-}
-
 // PreparePassword strips leading and trailing white space
 // and normalizes to unicode NFKD
 func PreparePassword(s string) string {
