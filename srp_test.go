@@ -179,7 +179,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		"3499B200 210DCC1F 10EB3394 3CD67FC8 8A2F39A4 BE5BEC4E C0A3212D" +
 		"C346D7E4 74B29EDE 8A469FFE CA686E5A")
 
-	server := NewSRPClient(KnownGroups[groupID], v)
+	server := NewSRPServer(KnownGroups[groupID], v)
 
 	var err error
 	var ret *big.Int
