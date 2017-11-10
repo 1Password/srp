@@ -6,14 +6,10 @@ import (
 	"math/big"
 	"strings"
 	"testing"
-
-	"github.com/pkg/errors"
 )
 
 // These tests are based on SRP Test Vectors
 // https://tools.ietf.org/html/rfc5054#appendix-B
-
-var runVerySlowTests = false // run slow tests on groups?
 
 var expectedX = NumberFromString("0x 94B7555A ABE9127C C58CCF49 93DB6CF8 4D16C124")
 
@@ -48,7 +44,7 @@ func hexNumberString(s string) *big.Int {
 	if err != nil {
 		panic(err)
 	}
-	return NumberFromBytes(result)
+	return numberFromBtyes(result)
 }
 
 // Auth contains information on the type of auth used
@@ -68,9 +64,8 @@ func TestCalculateClientRawKey(t *testing.T) {
 	expectedKey := NumberFromString("f6bef3d6fa5a08a849bf61041cd5b3185c16aede851c819a3644fa7e918c4da6")
 
 	groupID := RFC5054Group4096
-	client := NewSRPClient(KnownGroups[groupID], x)
+	client := NewSRPClient(KnownGroups[groupID], x, k)
 	client.ephemeralPrivate = a
-	client.k = k
 	client.makeA()
 	client.SetOthersPublic(B)
 	client.u = u
@@ -84,7 +79,7 @@ func TestCalculateClientRawKey(t *testing.T) {
 func TestNewSRPClient(t *testing.T) {
 	var err error
 	x := NumberFromString("740299d2306764ad9e87f37cd54179e388fd45c85fea3b030eb425d7adcb2773")
-	s := NewSRPClient(KnownGroups[RFC5054Group4096], x)
+	s := NewSRPClient(KnownGroups[RFC5054Group4096], x, nil)
 
 	expectedV4096 := NumberFromString("d05240ed513a4f267608e64cf2a84f5106741ddbf1435707a84f530207409d7" +
 		"af1e671182f9d77855b61c628df2b8f6ba8e9b6068fbc84fab80b4542f44c666e17358ebffa8d6fb00fd7037a" +
@@ -116,7 +111,7 @@ func TestSRPClient1024(t *testing.T) {
 	var err error
 	var clientV *big.Int
 	x := expectedX
-	s := NewSRPClient(KnownGroups[RFC5054Group1024], x)
+	s := NewSRPClient(KnownGroups[RFC5054Group1024], x, nil)
 
 	if clientV, err = s.Verifier(); err != nil {
 		t.Errorf("couldn't make v: %s", err)
@@ -169,31 +164,32 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		"3499B200 210DCC1F 10EB3394 3CD67FC8 8A2F39A4 BE5BEC4E C0A3212D" +
 		"C346D7E4 74B29EDE 8A469FFE CA686E5A")
 
-	server := NewSRPServer(KnownGroups[groupID], v)
+	server := NewSRPServer(KnownGroups[groupID], v, k)
 
 	var err error
 	var ret *big.Int
 
 	// Our calculation of k is not compatable with RFC5054
-	if server.k.Cmp(k) == 0 {
-		t.Error("A miracle: k meets 5054 expected value")
+	if server.k.Cmp(k) != 0 {
+		t.Error("Didn't set k, it seems")
 	}
 
-	server.k = k
+	// force use of test vector b
 	server.ephemeralPrivate = b
 
+	// We will to force remaking of B and u after setting b
+	// might as well test those as we do remake them
 	if ret, err = server.makeB(); err != nil {
 		t.Errorf("MakeB failed: %s", err)
 	}
-	if ret.Cmp(server.ephemeralPublicB) != 0 {
+	if ret.Cmp(server.EphemeralPublic()) != 0 {
 		t.Error("B does not equal B (nobody tell Ayn Rand)")
 	}
-
-	if server.ephemeralPublicB.Cmp(B) != 0 {
+	if server.EphemeralPublic().Cmp(B) != 0 {
 		t.Error("B is incorrect")
 	}
 
-	server.ephemeralPublicA = A
+	server.SetOthersPublic(A)
 	if ret, err = server.calculateU(); err != nil {
 		t.Errorf("calculateu failed: %s", err)
 	}
@@ -204,7 +200,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		t.Error("A miracle: u meets 5054 expected value")
 	}
 
-	// Use standard test vector u
+	// Force use of test vector u
 	server.u = u
 	if ret, err = server.MakeKey(); err != nil {
 		t.Errorf("MakeKey failed: %s", err)
@@ -218,23 +214,26 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 
 	// Now lets compute the key from the client side
 
-	client := NewSRPClient(KnownGroups[groupID], x)
+	client := NewSRPClient(KnownGroups[groupID], x, k)
 
-	// Our calculation of k is not compatable with RFC5054
-	client.k = k
+	// Force use of test vector a
 	client.ephemeralPrivate = a
+
+	// Will need to force remake of A and u after setting a
 	if ret, err = client.makeA(); err != nil {
 		t.Errorf("MakeA failed: %s", err)
 	}
-	if ret.Cmp(client.ephemeralPublicA) != 0 {
+	if ret.Cmp(client.EphemeralPublic()) != 0 {
 		t.Error("A does not equal A (nobody tell Ayn Rand)")
 	}
 
-	if client.ephemeralPublicA.Cmp(A) != 0 {
+	if client.EphemeralPublic().Cmp(A) != 0 {
 		t.Error("A is incorrect")
 	}
 
-	client.ephemeralPublicB = B
+	if err = client.SetOthersPublic(B); err != nil {
+		t.Errorf("client couldn't set B: %s", err)
+	}
 	if ret, err = client.calculateU(); err != nil {
 		t.Errorf("calculated client u failed: %s", err)
 	}
@@ -254,18 +253,20 @@ func TestClientServerMatch(t *testing.T) {
 
 	xbytes := make([]byte, 32)
 	rand.Read(xbytes)
-	x := NumberFromBytes(xbytes)
+	x := numberFromBtyes(xbytes)
 
-	client := NewSRPClient(KnownGroups[groupID], x)
+	client := NewSRPClient(KnownGroups[groupID], x, nil)
 
 	if v, err = client.Verifier(); err != nil {
 		t.Errorf("verifier creation failed: %s", err)
 	}
 
-	server := NewSRPServer(KnownGroups[groupID], v)
+	server := NewSRPServer(KnownGroups[groupID], v, nil)
 
-	server.SetOthersPublic(client.ephemeralPublicA)
-	client.SetOthersPublic(server.ephemeralPublicB)
+	A := client.EphemeralPublic()
+	B := server.EphemeralPublic()
+	server.SetOthersPublic(A)
+	client.SetOthersPublic(B)
 
 	server.MakeKey()
 	client.MakeKey()
@@ -285,9 +286,9 @@ func TestClientServerMatch(t *testing.T) {
 func TestBadA(t *testing.T) {
 	xbytes := make([]byte, 32)
 	rand.Read(xbytes)
-	v := NumberFromBytes(xbytes)
+	v := numberFromBtyes(xbytes)
 
-	server := NewSRPServer(KnownGroups[RFC5054Group4096], v)
+	server := NewSRPServer(KnownGroups[RFC5054Group4096], v, nil)
 
 	if err := server.SetOthersPublic(server.group.n); err == nil {
 		t.Error("a bad A was accepted")
@@ -301,58 +302,4 @@ func TestBadA(t *testing.T) {
 		t.Error("key created after bad B")
 	}
 
-}
-
-func TestGroups(t *testing.T) {
-	MinGroupSize = 1024 // We need a 1024 group to test against spec
-	for _, grp := range KnownGroups {
-		if err := checkGroup(*grp); err != nil {
-			t.Errorf("bad group %s: %s", grp.Label, err)
-		}
-		if runVerySlowTests {
-			if err := checkGroupSlow(*grp); err != nil {
-				t.Errorf("suspicious group %s: %s", grp.Label, err)
-			}
-		}
-	}
-}
-
-func checkGroup(group Group) error {
-
-	if group.n == nil {
-		return errors.New("N not set")
-	}
-	if group.g == nil {
-		return errors.New("g not set")
-	}
-	if group.n.BitLen() < MinGroupSize {
-		return errors.New("N too small")
-	}
-	if group.g.Cmp(bigOne) != 1 {
-		return errors.New("g < 2")
-	}
-	z := new(big.Int)
-	if z.GCD(nil, nil, group.g, group.n).Cmp(bigOne) != 0 {
-		return errors.New("GCD(g, N) != 1")
-	}
-
-	return nil
-}
-
-// These tests are very slow. Several seconds per group
-// Also they do not defend against maliciously crafted groups
-func checkGroupSlow(group Group) error {
-	if !group.n.ProbablyPrime(2) {
-		return errors.New("N isn't prime")
-	}
-
-	// is N a safe prime?
-	// Does N = 2q + 1, where q is prime?
-	q := new(big.Int)
-	q.Sub(group.n, bigOne)
-	q.Div(q, big.NewInt(2))
-	if !q.ProbablyPrime(2) {
-		return errors.New("N isn't a safe prime")
-	}
-	return nil
 }

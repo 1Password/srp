@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// NumberFromBytes converts a byte array to a number
-func NumberFromBytes(bytes []byte) *big.Int {
+// numberFromBtyes converts a byte array to a number
+func numberFromBtyes(bytes []byte) *big.Int {
 	result := new(big.Int)
 	for _, b := range bytes {
 		result.Lsh(result, 8)
@@ -33,4 +33,14 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// bigIntFromBytes converts a byte array to a number
+func bigIntFromBytes(bytes []byte) *big.Int {
+	result := new(big.Int)
+	for _, b := range bytes {
+		result.Lsh(result, 8)
+		result.Add(result, big.NewInt(int64(b)))
+	}
+	return result
 }

@@ -1,7 +1,6 @@
 package srp
 
 import (
-	rand "crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"math/big"
@@ -172,12 +171,12 @@ type SRP struct {
 var bigZero = big.NewInt(0)
 var bigOne = big.NewInt(1)
 
-func NewSRPClient(group *Group, x *big.Int) *SRP {
-	return newSRP(false, group, x)
+func NewSRPClient(group *Group, x *big.Int, k *big.Int) *SRP {
+	return newSRP(false, group, x, k)
 }
 
-func NewSRPServer(group *Group, v *big.Int) *SRP {
-	return newSRP(true, group, v)
+func NewSRPServer(group *Group, v *big.Int, k *big.Int) *SRP {
+	return newSRP(true, group, v, k)
 }
 
 /*
@@ -190,8 +189,12 @@ group *Group: Pointer to the Diffie-Hellman group to be used.
 
 xORv *big.Int: Your long term secret, x or v. If you are the client, pass in x.
 If you are the server pass in v.
+
+k *big.Int: If you wish to manually set the multiplier, little k, pass in
+a non-nil bigInt. If you set this to nil, then we will generate one for you.
+You need the same k on both server and client.
 */
-func newSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
+func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 
 	// Goldberg Q: Why am I copying the group, instead of just using setting pointers?
 	// Goldber A: Because every time I try to do it the "right" way bad things happen.
@@ -226,102 +229,19 @@ func newSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
 		s.x.Set(xORv)
 	}
 
-	s.makeLittleK()
+	if k != nil {
+		// should probably do some sanity checks on k here
+		s.k.Set(k)
+	} else {
+		s.makeLittleK()
+	}
 	s.generateMySecret()
 	if s.isServer {
 		s.makeB()
 	} else {
 		s.makeA()
 	}
-
 	return s
-}
-
-// generateMySecret creates the little a or b
-// According to RFC5054, this should be at least 32 bytes
-// According to RFC2631 this should be uniform in the range
-// [2, q-2], where q is the Sofie Germain prime from which
-// N was created.
-// According to RFC3526 §8 there are some specific sizes depending
-// on the group. We go with RFC3526 values if available, otherwise
-// a minimum of 32 bytes.
-
-func (s *SRP) generateMySecret() *big.Int {
-
-	eSize := max(s.group.ExponentSize, MinExponentSize)
-	bytes := make([]byte, eSize)
-	rand.Read(bytes)
-	s.ephemeralPrivate = NumberFromBytes(bytes)
-	return s.ephemeralPrivate
-}
-
-// makeLittleK initializes multiplier based on group paramaters
-// k = H(N, g)
-// This does _not_ confirm to RFC5054 padding
-func (s *SRP) makeLittleK() (*big.Int, error) {
-	if s.group == nil {
-		return nil, fmt.Errorf("group not set")
-	}
-	h := sha256.New()
-	h.Write(s.group.n.Bytes())
-	h.Write(s.group.g.Bytes())
-	s.k = NumberFromBytes(h.Sum(nil))
-	return s.k, nil
-}
-
-// makeA calculates A (if necessary) and returns it
-func (s *SRP) makeA() (*big.Int, error) {
-	if s.group == nil {
-		return nil, fmt.Errorf("group not set")
-	}
-	if s.isServer {
-		return nil, fmt.Errorf("only the client can make A")
-	}
-	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
-		s.ephemeralPrivate = s.generateMySecret()
-	}
-
-	s.ephemeralPublicA = &big.Int{}
-	result := s.ephemeralPublicA.Exp(s.group.g, s.ephemeralPrivate, s.group.n)
-	return result, nil
-}
-
-// makeB calculates B (if necessary) and returms it
-func (s *SRP) makeB() (*big.Int, error) {
-
-	term1 := &big.Int{}
-	term2 := &big.Int{}
-
-	// Absolute Prerequisits: Group, isServer, v
-	if s.group == nil {
-		return nil, fmt.Errorf("group not set")
-	}
-	if !s.isServer {
-		return nil, fmt.Errorf("only the server can make B")
-	}
-	if s.v.Cmp(bigZero) == 0 {
-		return nil, fmt.Errorf("k must be known before B can be calculated")
-	}
-
-	// Generatable prerequists: k, b if needed
-	if s.k.Cmp(bigZero) == 0 {
-		var err error
-		if s.k, err = s.makeLittleK(); err != nil {
-			return nil, err
-		}
-	}
-	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
-		s.ephemeralPrivate = s.generateMySecret()
-	}
-
-	// B = kv + g^b  (term1 is kv, term2 is g^b)
-	term2.Exp(s.group.g, s.ephemeralPrivate, s.group.n)
-	term1.Mul(s.k, s.v)
-	term1.Mod(term1, s.group.n) // We can work with smaller numbers through modular reduction
-	s.ephemeralPublicB.Add(term1, term2)
-	s.ephemeralPublicB.Mod(s.ephemeralPublicB, s.group.n) // more modular reduction
-
-	return s.ephemeralPublicB, nil
 }
 
 // EphemeralPublic returns A on client or B on server
@@ -331,7 +251,13 @@ func (s *SRP) makeB() (*big.Int, error) {
 // just needs to send EphemeralPublic() to the other party.
 func (s *SRP) EphemeralPublic() *big.Int {
 	if s.isServer {
+		if s.ephemeralPublicB.Cmp(bigZero) == 0 {
+			s.makeB()
+		}
 		return s.ephemeralPublicB
+	}
+	if s.ephemeralPublicA.Cmp(bigZero) == 0 {
+		s.makeA()
 	}
 	return s.ephemeralPublicA
 }
@@ -376,22 +302,6 @@ func (s *SRP) Verifier() (*big.Int, error) {
 	return s.makeVerifier()
 }
 
-// calculateU creates a hash A and B
-// It does not use RFC 5054 compatable hashing
-func (s *SRP) calculateU() (*big.Int, error) {
-	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
-		s.u = nil
-		return nil, fmt.Errorf("both A and B must be known to calculate u")
-	}
-
-	h := sha256.New()
-
-	h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
-
-	s.u = NumberFromBytes(h.Sum(nil))
-	return s.u, nil
-}
-
 // SetOthersPublic sets A if server and B if client
 // Caller *MUST* check for error status and abort the session
 // on error. This setter will invoke IsPublicValid() and error
@@ -414,38 +324,7 @@ func (s *SRP) SetOthersPublic(AorB *big.Int) error {
 	} else {
 		s.ephemeralPublicB.Set(AorB)
 	}
-	if u, err := s.calculateU(); u == nil || err != nil {
-		return fmt.Errorf("failed to calculate u: %s", err)
-	}
 	return nil
-}
-
-func (s *SRP) isUValid() bool {
-	if s.u == nil || s.badState {
-		s.u = nil
-		return false
-	}
-	if s.u.Cmp(bigZero) == 0 {
-		return false
-	}
-	return true
-}
-
-// makeVerifier creates to the verifier from x and paramebers
-func (s *SRP) makeVerifier() (*big.Int, error) {
-	if s.group == nil {
-		return nil, fmt.Errorf("group not set")
-	}
-	if s.badState {
-		return nil, fmt.Errorf("we have bad data")
-	}
-	if s.x.Cmp(bigZero) == 0 {
-		return nil, fmt.Errorf("x must be known to calculate v")
-	}
-
-	result := s.v.Exp(s.group.g, s.x, s.group.n)
-
-	return result, nil
 }
 
 // MakeKey creates and returns the session Key
@@ -464,7 +343,9 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 		return nil, fmt.Errorf("group not set")
 	}
 	if !s.isUValid() {
-		return nil, fmt.Errorf("u must be known to make Key")
+		if u, err := s.calculateU(); u == nil || err != nil {
+			return nil, fmt.Errorf("failed to calculate u: %s", err)
+		}
 	}
 	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
 		return nil, fmt.Errorf("cannot make Key with my ephemeral secret")
@@ -481,8 +362,7 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 		b.Exp(s.v, s.u, s.group.n)
 		b.Mul(b, s.ephemeralPublicA)
 		e = s.ephemeralPrivate
-
-	} else {
+	} else { // client
 		// (B - kg^x) ^ (a + ux)
 		if s.ephemeralPublicB == nil || s.k == nil || s.x == nil {
 			return nil, fmt.Errorf("not enough is known to create Key")
@@ -501,7 +381,7 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 	h := sha256.New()
 	h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
 
-	s.Key = NumberFromBytes(h.Sum(nil))
+	s.Key = numberFromBtyes(h.Sum(nil))
 	return s.Key, nil
 
 }

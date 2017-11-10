@@ -43,18 +43,8 @@ func KDFRFC5054(salt []byte, username string, password string) (x *big.Int) {
 	oHasher.Write(ih)
 
 	h := oHasher.Sum(nil)
-	x = BigIntFromBytes(h)
+	x = bigIntFromBytes(h)
 	return x
-}
-
-// BigIntFromBytes converts a byte array to a number
-func BigIntFromBytes(bytes []byte) *big.Int {
-	result := new(big.Int)
-	for _, b := range bytes {
-		result.Lsh(result, 8)
-		result.Add(result, big.NewInt(int64(b)))
-	}
-	return result
 }
 
 // PreparePassword strips leading and trailing white space
