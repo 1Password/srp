@@ -117,18 +117,17 @@ The key derivation function, KDF()
 	The server then keeps {I, s, v} in its database.
 */
 type SRP struct {
-	group             *Group
-	ephemeralPrivate  *big.Int // Little a or little b (ephemeral secrets)
-	ephemeralPublicA  *big.Int // Public A
-	ephemeralPublicB  *big.Int // Public A and B ephemeral values
-	x, v              *big.Int // x and verifier (long term secrets)
-	u                 *big.Int // calculated scrambling parameter
-	k                 *big.Int // multiplier parameter
-	premasterKey      *big.Int // unhashed derived session secret
-	Key               *big.Int // H(premasterKey)
-	isServer          bool
-	badState          bool
-	hasBBeenRequested bool
+	group            *Group
+	ephemeralPrivate *big.Int // Little a or little b (ephemeral secrets)
+	ephemeralPublicA *big.Int // Public A
+	ephemeralPublicB *big.Int // Public A and B ephemeral values
+	x, v             *big.Int // x and verifier (long term secrets)
+	u                *big.Int // calculated scrambling parameter
+	k                *big.Int // multiplier parameter
+	premasterKey     *big.Int // unhashed derived session secret
+	Key              *big.Int // H(premasterKey)
+	isServer         bool
+	badState         bool
 }
 
 // bigZero is a BigInt zero
@@ -145,8 +144,12 @@ group *Group: Pointer to the Diffie-Hellman group to be used.
 
 xORv *big.Int: Your long term secret, x or v. If you are the client, pass in x.
 If you are the server pass in v.
+
+k *big.Int: If you wish to manually set the multiplier, little k, pass in
+a non-nil bigInt. If you set this to nil, then we will generate one for you.
+You need the same k on both server and client.
 */
-func NewSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
+func NewSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 
 	// Goldberg Q: Why am I copying the group, instead of just using setting pointers?
 	// Goldber A: Because every time I try to do it the "right" way bad things happen.
@@ -160,18 +163,17 @@ func NewSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
 	s := &SRP{
 		// Setting these to Int-zero gives me a useful way to test
 		// if these have been properly set later
-		ephemeralPublicA:  big.NewInt(0),
-		ephemeralPrivate:  big.NewInt(0),
-		ephemeralPublicB:  big.NewInt(0),
-		u:                 big.NewInt(0),
-		k:                 big.NewInt(0),
-		x:                 big.NewInt(0),
-		v:                 big.NewInt(0),
-		premasterKey:      big.NewInt(0),
-		Key:               big.NewInt(0),
-		group:             sGroup,
-		badState:          false,
-		hasBBeenRequested: false,
+		ephemeralPublicA: big.NewInt(0),
+		ephemeralPrivate: big.NewInt(0),
+		ephemeralPublicB: big.NewInt(0),
+		u:                big.NewInt(0),
+		k:                big.NewInt(0),
+		x:                big.NewInt(0),
+		v:                big.NewInt(0),
+		premasterKey:     big.NewInt(0),
+		Key:              big.NewInt(0),
+		group:            sGroup,
+		badState:         false,
 
 		isServer: serverSide,
 	}
@@ -182,7 +184,12 @@ func NewSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
 		s.x.Set(xORv)
 	}
 
-	s.makeLittleK()
+	if k != nil {
+		// should probably do some sanity checks on k here
+		s.k.Set(k)
+	} else {
+		s.makeLittleK()
+	}
 	s.generateMySecret()
 	if s.isServer {
 		s.makeB()
@@ -199,12 +206,14 @@ func NewSRP(serverSide bool, group *Group, xORv *big.Int) *SRP {
 // just needs to send EphemeralPublic() to the other party.
 func (s *SRP) EphemeralPublic() *big.Int {
 	if s.isServer {
-		s.hasBBeenRequested = true
-		// Always remake B as k may have been reset since last time B was generated
-		s.makeB()
+		if s.ephemeralPublicB.Cmp(bigZero) == 0 {
+			s.makeB()
+		}
 		return s.ephemeralPublicB
 	}
-	s.makeA()
+	if s.ephemeralPublicA.Cmp(bigZero) == 0 {
+		s.makeA()
+	}
 	return s.ephemeralPublicA
 }
 
@@ -301,13 +310,6 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 	e := &big.Int{} // exponent
 
 	if s.isServer {
-
-		// unfortanate trickery to force certain orders of calls
-		if !s.hasBBeenRequested {
-			if s.EphemeralPublic() == nil {
-				return nil, fmt.Errorf("Problem requesting B when making key")
-			}
-		}
 		// S = (Av^u) ^ b
 		if s.v == nil || s.ephemeralPublicA == nil {
 			return nil, fmt.Errorf("not enough is known to create Key")
@@ -315,8 +317,7 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 		b.Exp(s.v, s.u, s.group.n)
 		b.Mul(b, s.ephemeralPublicA)
 		e = s.ephemeralPrivate
-
-	} else {
+	} else { // client
 		// (B - kg^x) ^ (a + ux)
 		if s.ephemeralPublicB == nil || s.k == nil || s.x == nil {
 			return nil, fmt.Errorf("not enough is known to create Key")
@@ -338,39 +339,4 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 	s.Key = numberFromBtyes(h.Sum(nil))
 	return s.Key, nil
 
-}
-
-// SetK sets the multiplier k if we do not derive it internally ala 5054.
-// This is particularly useful for 1Password, where we use the SessionID
-// in the creation of K.
-func (s *SRP) SetK(k *big.Int) (*big.Int, error) {
-	if k == nil || k.Cmp(bigZero) == 0 {
-		return nil, fmt.Errorf("SRP failed to set multiplier k")
-	}
-	if s.hasBBeenRequested {
-		return s.k, fmt.Errorf("Don't set k after you have gotten B")
-	}
-	s.k.Set(k)
-	if s.isServer {
-		s.makeB()
-	}
-	return s.k, nil
-}
-
-// SetKFromHex sets the multiplier k if we do not derive it internally ala 5054.
-// This is particularly useful for 1Password, where we use the SessionID
-// in the creation of K. Input is a hex string that will be converted
-// to a big Int. This saves the caller from having to import math/big
-func (s *SRP) SetKFromHex(kstr string) (k *big.Int, err error) {
-	k = NumberFromString(kstr)
-	return s.SetK(k)
-}
-
-// SetKFromBytes sets the multiplier k if we do not derive it internally ala 5054.
-// This is particularly useful for 1Password, where we use the SessionID
-// in the creation of K. Input is a byte slice that will be converted
-// to a big Int. This saves the caller from having to import math/big
-func (s *SRP) SetKFromBytes(bytes []byte) (k *big.Int, err error) {
-	k = bigIntFromBytes(bytes)
-	return s.SetK(k)
 }
