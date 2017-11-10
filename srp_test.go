@@ -11,8 +11,6 @@ import (
 // These tests are based on SRP Test Vectors
 // https://tools.ietf.org/html/rfc5054#appendix-B
 
-var runVerySlowTests = false // run slow tests on groups?
-
 var expectedX = NumberFromString("0x 94B7555A ABE9127C C58CCF49 93DB6CF8 4D16C124")
 
 var expectedVerifier = hexNumberString(

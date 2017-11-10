@@ -7,6 +7,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var runVerySlowTests = false // run slow tests on groups?
+
 func TestGroups(t *testing.T) {
 	MinGroupSize = 1024 // We need a 1024 group to test against spec
 	for _, grp := range KnownGroups {
