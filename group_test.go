@@ -40,6 +40,23 @@ func checkGroup(group Group) error {
 		return errors.New("GCD(g, N) != 1")
 	}
 
+	/* My understanding of the discussion of Theorem 8.64 in Introduction to
+	 * Modern Cryptography (2nd) edition is that we should be able to test
+	 * whether g is in the big subgroup. If N is a safe prime, such
+	 * N = 2q + 1, where q is prime (so q is a Germain prime) then any
+	 * member, h, of the cyclic subgroup of order q, should statisfy
+	 * h^q ≡ 1 mod N.
+	**/
+
+	/* But these tests are failing
+	q := new(big.Int)
+	q.Sub(group.n, bigOne)
+	q.Div(q, big.NewInt(2))
+	if z = z.Exp(group.g, q, group.n); z.Cmp(bigOne) != 0 {
+		return errors.New("g doesn't appear to be in right subgroup")
+	}
+	*/
+
 	return nil
 }
 
