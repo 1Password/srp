@@ -257,6 +257,14 @@ func (s *SRP) EphemeralPublic() *big.Int {
 	return s.ephemeralPublicA
 }
 
+func (s *SRP) ResetEphemeralPublic() {
+	s.ephemeralPublicA.Set(bigZero)
+}
+
+func (s *SRP) TestOnlySetSecret(secret *big.Int) {
+	s.ephemeralPrivate.Set(secret)
+}
+
 // IsPublicValid checks to see whether public A or B is valid within the group
 // A client can do very bad things by sending a malicious A to the server.
 // The server can do mildly bad things by sending a malicious B to the client.
