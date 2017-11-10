@@ -200,16 +200,6 @@ func NewSRPServer(group *Group, v *big.Int, k *big.Int) *SRP {
 }
 
 func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
-
-	// Goldberg Q: Why am I copying the group, instead of just using setting pointers?
-	// Goldber A: Because every time I try to do it the "right" way bad things happen.
-	sGroup := &Group{
-		n:            group.n,
-		g:            group.g,
-		Label:        group.Label,
-		ExponentSize: group.ExponentSize,
-	}
-
 	s := &SRP{
 		// Setting these to Int-zero gives me a useful way to test
 		// if these have been properly set later
@@ -222,7 +212,7 @@ func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 		v:                big.NewInt(0),
 		premasterKey:     big.NewInt(0),
 		Key:              big.NewInt(0),
-		group:            sGroup,
+		group:            group,
 		badState:         false,
 
 		isServer: serverSide,
