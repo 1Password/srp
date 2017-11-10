@@ -171,29 +171,34 @@ type SRP struct {
 var bigZero = big.NewInt(0)
 var bigOne = big.NewInt(1)
 
-func NewSRPClient(group *Group, x *big.Int, k *big.Int) *SRP {
-	return newSRP(false, group, x, k)
-}
-
-func NewSRPServer(group *Group, v *big.Int, k *big.Int) *SRP {
-	return newSRP(true, group, v, k)
-}
-
-/*
-NewSRP creates an SRP object and sets up defaults.
-
-serverSide bool: Use true when creating an SRP object to be used on the server,
-otherwise set false.
+/* NewSRPClient sets up an SRP object for a client.
 
 group *Group: Pointer to the Diffie-Hellman group to be used.
 
-xORv *big.Int: Your long term secret, x or v. If you are the client, pass in x.
-If you are the server pass in v.
+x *big.Int: Your long term secret, x.
 
 k *big.Int: If you wish to manually set the multiplier, little k, pass in
 a non-nil bigInt. If you set this to nil, then we will generate one for you.
 You need the same k on both server and client.
 */
+func NewSRPClient(group *Group, x *big.Int, k *big.Int) *SRP {
+	return newSRP(false, group, x, k)
+}
+
+/* NewSRPClient sets up an SRP object for a server.
+
+group *Group: Pointer to the Diffie-Hellman group to be used.
+
+v *big.Int: Your long term secret, v.
+
+k *big.Int: If you wish to manually set the multiplier, little k, pass in
+a non-nil bigInt. If you set this to nil, then we will generate one for you.
+You need the same k on both server and client.
+*/
+func NewSRPServer(group *Group, v *big.Int, k *big.Int) *SRP {
+	return newSRP(true, group, v, k)
+}
+
 func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 
 	// Goldberg Q: Why am I copying the group, instead of just using setting pointers?
