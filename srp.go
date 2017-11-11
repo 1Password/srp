@@ -257,10 +257,20 @@ func (s *SRP) EphemeralPublic() *big.Int {
 	return s.ephemeralPublicA
 }
 
+// ResetEphemeralPublic should only be used when constructing
+// tests of SRP integration with the consumer.
+//
+// Depreciated: This is for testing only. It is not meant to
+// be used in real code, and may disappear at any moment.
 func (s *SRP) ResetEphemeralPublic() {
 	s.ephemeralPublicA.Set(bigZero)
 }
 
+// TestOnlySetSecret should only be used when constructing
+// tests of SRP integration with the consumer.
+//
+// Depreciated: This is for testing only. It is not meant to
+// be used in real code, and may disappear at any moment.
 func (s *SRP) TestOnlySetSecret(secret *big.Int) {
 	s.ephemeralPrivate.Set(secret)
 }
