@@ -116,6 +116,43 @@ The key derivation function, KDF()
 	v is sent to the server on first enrollment.
 	The server then keeps {I, s, v} in its database.
 */
+
+/*
+SRP provides the primary interface to this package.
+
+Because many of the inputs require checks against malicious data, many are set using
+setters instead of being public/exported in the type. This is to ensure that bad
+values do not get used.
+
+Creating the SRP object with with NewSRPServer()/NewSRPClient() takes care of generating your ephemeral
+secret (a or b depending on whether you are a client or server), your public
+ephemeral key (A or B depending on whether you are a client or server),
+the multiplier k. (There is a setter for k if you wish to use a different scheme
+to set those.
+
+A typical use by a server might be something like
+
+	server := NewSRPServer(KnownGroups[RFC5054Group4096], v)
+
+	A := getAfromYourClientConnection(...) // your code
+	if result, err := server.SetOthersPublic(A); result == nil || err != nil {
+		// client sent a malicious A. Kill this session now
+	}
+
+	sendBtoClientSomehow(server.EphemeralPublic())
+
+	if sessionKey, err := server.MakeKey(); sessionKey == nil || err != nil {
+		// something went wrong
+	}
+
+	// You must still prove that both server and client created the same Key.
+
+This still leaves some work outside of what the SRP object provides.
+1. The key derivation of x is not handled by this object.
+2. The communication between client and server.
+3. The check that both client and server have negotiated the same Key is left outside.
+
+*/
 type SRP struct {
 	group            *Group
 	ephemeralPrivate *big.Int // Little a or little b (ephemeral secrets)
@@ -134,32 +171,35 @@ type SRP struct {
 var bigZero = big.NewInt(0)
 var bigOne = big.NewInt(1)
 
-/*
-NewSRP creates an SRP object and sets up defaults.
-
-serverSide bool: Use true when creating an SRP object to be used on the server,
-otherwise set false.
+/* NewSRPClient sets up an SRP object for a client.
 
 group *Group: Pointer to the Diffie-Hellman group to be used.
 
-xORv *big.Int: Your long term secret, x or v. If you are the client, pass in x.
-If you are the server pass in v.
+x *big.Int: Your long term secret, x.
 
 k *big.Int: If you wish to manually set the multiplier, little k, pass in
 a non-nil bigInt. If you set this to nil, then we will generate one for you.
 You need the same k on both server and client.
 */
-func NewSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
+func NewSRPClient(group *Group, x *big.Int, k *big.Int) *SRP {
+	return newSRP(false, group, x, k)
+}
 
-	// Goldberg Q: Why am I copying the group, instead of just using setting pointers?
-	// Goldber A: Because every time I try to do it the "right" way bad things happen.
-	sGroup := &Group{
-		n:            group.n,
-		g:            group.g,
-		Label:        group.Label,
-		ExponentSize: group.ExponentSize,
-	}
+/* NewSRPClient sets up an SRP object for a server.
 
+group *Group: Pointer to the Diffie-Hellman group to be used.
+
+v *big.Int: Your long term secret, v.
+
+k *big.Int: If you wish to manually set the multiplier, little k, pass in
+a non-nil bigInt. If you set this to nil, then we will generate one for you.
+You need the same k on both server and client.
+*/
+func NewSRPServer(group *Group, v *big.Int, k *big.Int) *SRP {
+	return newSRP(true, group, v, k)
+}
+
+func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 	s := &SRP{
 		// Setting these to Int-zero gives me a useful way to test
 		// if these have been properly set later
@@ -172,7 +212,7 @@ func NewSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 		v:                big.NewInt(0),
 		premasterKey:     big.NewInt(0),
 		Key:              big.NewInt(0),
-		group:            sGroup,
+		group:            group,
 		badState:         false,
 
 		isServer: serverSide,
@@ -215,6 +255,14 @@ func (s *SRP) EphemeralPublic() *big.Int {
 		s.makeA()
 	}
 	return s.ephemeralPublicA
+}
+
+func (s *SRP) ResetEphemeralPublic() {
+	s.ephemeralPublicA.Set(bigZero)
+}
+
+func (s *SRP) TestOnlySetSecret(secret *big.Int) {
+	s.ephemeralPrivate.Set(secret)
 }
 
 // IsPublicValid checks to see whether public A or B is valid within the group
@@ -336,7 +384,9 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 	h := sha256.New()
 	h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
 
-	s.Key = numberFromBtyes(h.Sum(nil))
-	return s.Key, nil
+	key := &big.Int{}
+	key.SetBytes(h.Sum(nil))
+	s.Key = key
 
+	return s.Key, nil
 }
