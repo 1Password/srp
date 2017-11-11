@@ -167,7 +167,8 @@ type SRP struct {
 var bigZero = big.NewInt(0)
 var bigOne = big.NewInt(1)
 
-/* NewSRPClient sets up an SRP object for a client.
+/*
+NewSRPClient sets up an SRP object for a client.
 
 group *Group: Pointer to the Diffie-Hellman group to be used.
 
@@ -181,7 +182,8 @@ func NewSRPClient(group *Group, x *big.Int, k *big.Int) *SRP {
 	return newSRP(false, group, x, k)
 }
 
-/* NewSRPClient sets up an SRP object for a server.
+/*
+NewSRPServer sets up an SRP object for a server.
 
 group *Group: Pointer to the Diffie-Hellman group to be used.
 
