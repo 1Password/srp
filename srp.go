@@ -388,7 +388,5 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 	key.SetBytes(h.Sum(nil))
 	s.Key = key
 
-	// s.Key = numberFromBtyes(h.Sum(nil))
 	return s.Key, nil
-
 }
