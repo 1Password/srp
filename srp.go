@@ -1,322 +1,396 @@
+/*
+srp Secure Remote Password protocol
+
+The principle interface provided by this package is the SRP type.
+
+Creating the SRP object with with NewSRPServer() or NewSRPClient() takes care of generating your ephemeral
+secret (a or b depending on whether you are a client or server), your public
+ephemeral key (A or B depending on whether you are a client or server),
+the multiplier k (if nil is passed as a value for k when creating).
+
+A typical use by a server might be something like
+
+	server := NewSRPServer(KnownGroups[RFC5054Group4096], v, nil)
+
+	A := getAfromYourClientConnection(...) // your code
+	if result, err := server.SetOthersPublic(A); result == nil || err != nil {
+		// client sent a malicious A. Kill this session now
+	}
+
+	sendBtoClientSomehow(server.EphemeralPublic())
+
+	if sessionKey, err := server.MakeKey(); sessionKey == nil || err != nil {
+		// something went wrong
+	}
+
+	// You must still prove that both server and client created the same Key.
+
+This still leaves some work outside of what the SRP object provides.
+1. The key derivation of x is not handled by this object.
+2. The communication between client and server.
+3. The check that both client and server have negotiated the same Key is left outside.
+
+The SRP protocol
+
+It would be nice if this package could be used without having some understanding of the SRP protocol,
+but too much of the language and naming is depends on at least some familiarity. Here is a summary.
+
+The Secure Remote Password protocol involves a server and a client proving to
+each other that they know (or can derive) their long term secrets.
+The client long term secret is known as "x" and the corresponding server secret,
+the verifier, is known as "v". The verifier is mathematically related to x and is
+computed by the client on first enrollment and transmistted to the server.
+
+Typically, the server will store the verifier and the client will derive x from a user
+secret such as a password. Because the verifier can used like a password hash with
+respect to cracking, the derivation of x should be designed to resist password cracking
+if the verifier compromised.
+
+The client and the server must both use the same Diffie-Hellman group to peform
+their computations.
+
+The server and the client send an ephemeral public key to each other
+(The client sends A; the server sends B)
+With their private knowledge of their own ephemeral secrets (a or b) and their
+private knowledge of x (for the client) and v (for the server) along with public
+knowledge they are able to prove to each other that they know their respective
+secrets and can generate a session key, K, which may be used for further encryption
+during the session.
+
+Quoting from http://srp.stanford.edu/design.html (with some modification
+for KDF)
+
+    Names and notation
+	N    A large safe prime (N = 2q+1, where q is prime)
+	     All arithmetic is done modulo N.
+  	g    A generator modulo N
+  	k    Multiplier parameter (k = H(N, g) in SRP-6a, k = 3 for legacy SRP-6)
+  	H()  One-way hash function
+  	^    (Modular) Exponentiation
+  	u    Random scrambling parameter
+  	a,b  Secret ephemeral values
+  	A,B  Public ephemeral values
+  	x    Long term client secret (derived via KDF)
+	v    Long term server Verifier
+	s    Salt for key derivation function
+	I    User identifiers (username, account ID, etc)
+	KDF()    Key Derivation Function
+
+    The authentication protocol itself goes as follows
+
+	User -> Host:  I, A = g^a                  (identifies self, a = random number)
+	Host -> User:  s, B = kv + g^b             (sends salt, b = random number)
+
+	Both:  u = H(A, B)
+
+	User:  x = KDF(s, ...)             (user derives x)
+	User:  S = (B - kg^x) ^ (a + ux)   (computes raw session key)
+	User:  K = H(S)                    (computes session key)
+
+	Host:  S = (Av^u) ^ b              (computes raw session key)
+	Host:  K = H(S)                    (computes session key)
+
+    Now the two parties have a shared, strong session key K.
+    To complete authentication, they need to prove to each other that their keys match.
+
+This package does not address the actual communication between client and
+server. But through the SRP type it not only performs the calculations needed,
+it also performs safety and sanity checks on its input, and it hides everything
+from the caller except what the caller absolutely needs to provide.
+
+The key derivation function, KDF()
+
+	x is computed by client via KDF, user secrets, and random salt, s.
+
+	x = KDF(...)
+	v = g^x
+
+	v is sent to the server on first enrollment. v should be transmitted over a secure channel.
+	The server then stores {I, s, v} long term. v needs to be protected in the same way that
+	a password hash should be protected.
+*/
 package srp
 
 import (
-	"crypto/rand"
-	"crypto/sha1"
 	"crypto/sha256"
-	"crypto/sha512"
-	"encoding/base32"
-	"encoding/base64"
-	"encoding/hex"
 	"fmt"
-	"hash"
-	"io"
 	"math/big"
-	"strings"
-
-	"github.com/pkg/errors"
-	"golang.org/x/crypto/hkdf"
-	"golang.org/x/crypto/pbkdf2"
 )
 
-type srpgroup struct {
-	g, N *big.Int
+/*
+SRP provides the primary interface to this package.
+
+Creating the SRP object with with NewSRPServer()/NewSRPClient() takes care of generating your ephemeral
+secret (a or b depending on whether you are a client or server), your public
+ephemeral key (A or B depending on whether you are a client or server),
+the multiplier k. (There is a setter for k if you wish to use a different scheme
+to set those.
+
+A typical use by a server might be something like
+
+	server := NewSRPServer(KnownGroups[RFC5054Group4096], v, nil)
+
+	A := getAfromYourClientConnection(...) // your code
+	if result, err := server.SetOthersPublic(A); result == nil || err != nil {
+		// client sent a malicious A. Kill this session now
+	}
+
+	sendBtoClientSomehow(server.EphemeralPublic())
+
+	if sessionKey, err := server.MakeKey(); sessionKey == nil || err != nil {
+		// something went wrong
+	}
+
+	// You must still prove that both server and client created the same Key.
+
+This still leaves some work outside of what the SRP object provides.
+1. The key derivation of x is not handled by this object.
+2. The communication between client and server is not handled by this object.
+3. The check that both client and server have negotiated the same Key is left outside.
+
+*/
+type SRP struct {
+	group            *Group
+	ephemeralPrivate *big.Int // Little a or little b (ephemeral secrets)
+	ephemeralPublicA *big.Int // Public A
+	ephemeralPublicB *big.Int // Public A and B ephemeral values
+	x, v             *big.Int // x and verifier (long term secrets)
+	u                *big.Int // calculated scrambling parameter
+	k                *big.Int // multiplier parameter
+	premasterKey     *big.Int // unhashed derived session secret
+	Key              []byte   // H(premasterKey)
+	isServer         bool
+	badState         bool
 }
 
-var knownGroups map[string]*srpgroup
+// bigZero is a BigInt zero
+var bigZero = big.NewInt(0)
+var bigOne = big.NewInt(1)
 
-func init() {
-	// g1024 is used for unit tests only
-	g1024 := &srpgroup{g: big.NewInt(2), N: new(big.Int)}
-	g1024.N.SetString("EEAF0AB9ADB38DD69C33F80AFA8FC5E86072618775FF3C0B9EA2314C"+
-		"9C256576D674DF7496EA81D3383B4813D692C6E0E0D5D8E250B98BE4"+
-		"8E495C1D6089DAD15DC7D7B46154D6B6CE8EF4AD69B15D4982559B29"+
-		"7BCF1885C529F566660E57EC68EDBC3C05726CC02FD4CBF4976EAA9A"+
-		"FD5138FE8376435B9FC61D2FC0EB06E3", 16)
+/* NewSRPClient sets up an SRP object for a client.
 
-	g4096 := &srpgroup{g: big.NewInt(5), N: new(big.Int)}
-	g4096.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
-		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
-		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
-		"A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"+
-		"49286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8"+
-		"FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D"+
-		"670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C"+
-		"180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF695581718"+
-		"3995497CEA956AE515D2261898FA051015728E5A8AAAC42DAD33170D"+
-		"04507A33A85521ABDF1CBA64ECFB850458DBEF0A8AEA71575D060C7D"+
-		"B3970F85A6E1E4C7ABF5AE8CDB0933D71E8C94E04A25619DCEE3D226"+
-		"1AD2EE6BF12FFA06D98A0864D87602733EC86A64521F2B18177B200C"+
-		"BBE117577A615D6C770988C0BAD946E208E24FA074E5AB3143DB5BFC"+
-		"E0FD108E4B82D120A92108011A723C12A787E6D788719A10BDBA5B26"+
-		"99C327186AF4E23C1A946834B6150BDA2583E9CA2AD44CE8DBBBC2DB"+
-		"04DE8EF92E8EFC141FBECAA6287C59474E6BC05D99B2964FA090C3A2"+
-		"233BA186515BE7ED1F612970CEE2D7AFB81BDD762170481CD0069127"+
-		"D5B05AA993B4EA988D8FDDC186FFB7DC90A6C08F4DF435C934063199"+
-		"FFFFFFFFFFFFFFFF", 16)
+group *Group: Pointer to the Diffie-Hellman group to be used.
 
-	g6144 := &srpgroup{g: big.NewInt(5), N: new(big.Int)}
-	g6144.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
-		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
-		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
-		"A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"+
-		"49286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8"+
-		"FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D"+
-		"670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C"+
-		"180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF695581718"+
-		"3995497CEA956AE515D2261898FA051015728E5A8AAAC42DAD33170D"+
-		"04507A33A85521ABDF1CBA64ECFB850458DBEF0A8AEA71575D060C7D"+
-		"B3970F85A6E1E4C7ABF5AE8CDB0933D71E8C94E04A25619DCEE3D226"+
-		"1AD2EE6BF12FFA06D98A0864D87602733EC86A64521F2B18177B200C"+
-		"BBE117577A615D6C770988C0BAD946E208E24FA074E5AB3143DB5BFC"+
-		"E0FD108E4B82D120A92108011A723C12A787E6D788719A10BDBA5B26"+
-		"99C327186AF4E23C1A946834B6150BDA2583E9CA2AD44CE8DBBBC2DB"+
-		"04DE8EF92E8EFC141FBECAA6287C59474E6BC05D99B2964FA090C3A2"+
-		"233BA186515BE7ED1F612970CEE2D7AFB81BDD762170481CD0069127"+
-		"D5B05AA993B4EA988D8FDDC186FFB7DC90A6C08F4DF435C934028492"+
-		"36C3FAB4D27C7026C1D4DCB2602646DEC9751E763DBA37BDF8FF9406"+
-		"AD9E530EE5DB382F413001AEB06A53ED9027D831179727B0865A8918"+
-		"DA3EDBEBCF9B14ED44CE6CBACED4BB1BDB7F1447E6CC254B33205151"+
-		"2BD7AF426FB8F401378CD2BF5983CA01C64B92ECF032EA15D1721D03"+
-		"F482D7CE6E74FEF6D55E702F46980C82B5A84031900B1C9E59E7C97F"+
-		"BEC7E8F323A97A7E36CC88BE0F1D45B7FF585AC54BD407B22B4154AA"+
-		"CC8F6D7EBF48E1D814CC5ED20F8037E0A79715EEF29BE32806A1D58B"+
-		"B7C5DA76F550AA3D8A1FBFF0EB19CCB1A313D55CDA56C9EC2EF29632"+
-		"387FE8D76E3C0468043E8F663F4860EE12BF2D5B0B7474D6E694F91E"+
-		"6DCC4024FFFFFFFFFFFFFFFF", 16)
+x *big.Int: Your long term secret, x.
 
-	g8192 := &srpgroup{g: big.NewInt(19), N: new(big.Int)}
-	g8192.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
-		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
-		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
-		"A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE6"+
-		"49286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8"+
-		"FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D"+
-		"670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C"+
-		"180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF695581718"+
-		"3995497CEA956AE515D2261898FA051015728E5A8AAAC42DAD33170D"+
-		"04507A33A85521ABDF1CBA64ECFB850458DBEF0A8AEA71575D060C7D"+
-		"B3970F85A6E1E4C7ABF5AE8CDB0933D71E8C94E04A25619DCEE3D226"+
-		"1AD2EE6BF12FFA06D98A0864D87602733EC86A64521F2B18177B200C"+
-		"BBE117577A615D6C770988C0BAD946E208E24FA074E5AB3143DB5BFC"+
-		"E0FD108E4B82D120A92108011A723C12A787E6D788719A10BDBA5B26"+
-		"99C327186AF4E23C1A946834B6150BDA2583E9CA2AD44CE8DBBBC2DB"+
-		"04DE8EF92E8EFC141FBECAA6287C59474E6BC05D99B2964FA090C3A2"+
-		"233BA186515BE7ED1F612970CEE2D7AFB81BDD762170481CD0069127"+
-		"D5B05AA993B4EA988D8FDDC186FFB7DC90A6C08F4DF435C934028492"+
-		"36C3FAB4D27C7026C1D4DCB2602646DEC9751E763DBA37BDF8FF9406"+
-		"AD9E530EE5DB382F413001AEB06A53ED9027D831179727B0865A8918"+
-		"DA3EDBEBCF9B14ED44CE6CBACED4BB1BDB7F1447E6CC254B33205151"+
-		"2BD7AF426FB8F401378CD2BF5983CA01C64B92ECF032EA15D1721D03"+
-		"F482D7CE6E74FEF6D55E702F46980C82B5A84031900B1C9E59E7C97F"+
-		"BEC7E8F323A97A7E36CC88BE0F1D45B7FF585AC54BD407B22B4154AA"+
-		"CC8F6D7EBF48E1D814CC5ED20F8037E0A79715EEF29BE32806A1D58B"+
-		"B7C5DA76F550AA3D8A1FBFF0EB19CCB1A313D55CDA56C9EC2EF29632"+
-		"387FE8D76E3C0468043E8F663F4860EE12BF2D5B0B7474D6E694F91E"+
-		"6DBE115974A3926F12FEE5E438777CB6A932DF8CD8BEC4D073B931BA"+
-		"3BC832B68D9DD300741FA7BF8AFC47ED2576F6936BA424663AAB639C"+
-		"5AE4F5683423B4742BF1C978238F16CBE39D652DE3FDB8BEFC848AD9"+
-		"22222E04A4037C0713EB57A81A23F0C73473FC646CEA306B4BCBC886"+
-		"2F8385DDFA9D4B7FA2C087E879683303ED5BDD3A062B3CF5B3A278A6"+
-		"6D2A13F83F44F82DDF310EE074AB6A364597E899A0255DC164F31CC5"+
-		"0846851DF9AB48195DED7EA1B1D510BD7EE74D73FAF36BC31ECFA268"+
-		"359046F4EB879F924009438B481C6CD7889A002ED5EE382BC9190DA6"+
-		"FC026E479558E4475677E9AA9E3050E2765694DFC81F56E880B96E71"+
-		"60C980DD98EDD3DFFFFFFFFFFFFFFFFF", 16)
-
-	knownGroups = make(map[string]*srpgroup)
-	knownGroups["1024"] = g1024
-	knownGroups["4096"] = g4096
-	knownGroups["6144"] = g6144
-	knownGroups["8192"] = g8192
+k *big.Int: If you wish to manually set the multiplier, little k, pass in
+a non-nil bigInt. If you set this to nil, then we will generate one for you.
+You need the same k on both server and client.
+*/
+func NewSRPClient(group *Group, x *big.Int, k *big.Int) *SRP {
+	return newSRP(false, group, x, k)
 }
 
-// AmodNisValid determines if "A mod N" is valid for the given
-// SRP group and value of A.
-func AmodNisValid(A *big.Int, groupName string) bool {
+/* NewSRPClient sets up an SRP object for a server.
+
+group *Group: Pointer to the Diffie-Hellman group to be used.
+
+v *big.Int: Your long term secret, v.
+
+k *big.Int: If you wish to manually set the multiplier, little k, pass in
+a non-nil bigInt. If you set this to nil, then we will generate one for you.
+You need the same k on both server and client.
+*/
+func NewSRPServer(group *Group, v *big.Int, k *big.Int) *SRP {
+	return newSRP(true, group, v, k)
+}
+
+func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
+	s := &SRP{
+		// Setting these to Int-zero gives me a useful way to test
+		// if these have been properly set later
+		ephemeralPublicA: big.NewInt(0),
+		ephemeralPrivate: big.NewInt(0),
+		ephemeralPublicB: big.NewInt(0),
+		u:                big.NewInt(0),
+		k:                big.NewInt(0),
+		x:                big.NewInt(0),
+		v:                big.NewInt(0),
+		premasterKey:     big.NewInt(0),
+		Key:              nil,
+		group:            group,
+		badState:         false,
+
+		isServer: serverSide,
+	}
+
+	if s.isServer {
+		s.v.Set(xORv)
+	} else {
+		s.x.Set(xORv)
+	}
+
+	if k != nil {
+		// should probably do some sanity checks on k here
+		s.k.Set(k)
+	} else {
+		s.makeLittleK()
+	}
+	s.generateMySecret()
+	if s.isServer {
+		s.makeB()
+	} else {
+		s.makeA()
+	}
+	return s
+}
+
+// EphemeralPublic returns A on client or B on server
+// If you are a client, you will need to send A to the server.
+// If you are a server, you will need to send B to the client.
+// But this abstracts away from user needing to keep A and B straight. Caller
+// just needs to send EphemeralPublic() to the other party.
+func (s *SRP) EphemeralPublic() *big.Int {
+	if s.isServer {
+		if s.ephemeralPublicB.Cmp(bigZero) == 0 {
+			s.makeB()
+		}
+		return s.ephemeralPublicB
+	}
+	if s.ephemeralPublicA.Cmp(bigZero) == 0 {
+		s.makeA()
+	}
+	return s.ephemeralPublicA
+}
+
+// ResetEphemeralPublic should only be used when constructing
+// tests of SRP integration with the consumer.
+//
+// Depreciated: This is for testing only. It is not meant to
+// be used in real code, and may disappear at any moment.
+func (s *SRP) ResetEphemeralPublic() {
+	s.ephemeralPublicA.Set(bigZero)
+}
+
+// TestOnlySetSecret should only be used when constructing
+// tests of SRP integration with the consumer.
+//
+// Depreciated: This is for testing only. It is not meant to
+// be used in real code, and may disappear at any moment.
+func (s *SRP) TestOnlySetSecret(secret *big.Int) {
+	s.ephemeralPrivate.Set(secret)
+}
+
+// IsPublicValid checks to see whether public A or B is valid within the group
+// A client can do very bad things by sending a malicious A to the server.
+// The server can do mildly bad things by sending a malicious B to the client.
+// This method is public in case the user wishes to check those values earlier than
+// than using SetOthersPublic(), which also performs this check.
+func (s *SRP) IsPublicValid(AorB *big.Int) bool {
+
 	result := big.Int{}
-
-	group := knownGroups[groupName]
-	if group == nil {
+	// There are three ways to fail.
+	// 1. If we aren't checking with respect to a valid group
+	// 2. If public paramater zero or a multiple of M
+	// 3. If public parameter is not relatively prime to N (a bad group?)
+	if s.group == nil {
+		return false
+	}
+	if s.group.g.Cmp(bigZero) == 0 {
 		return false
 	}
 
-	result.Mod(A, group.N)
-	if result.Sign() == 0 { // sign is zero only when the whole value is 0.
+	if result.Mod(AorB, s.group.n); result.Sign() == 0 {
+		return false
+	}
+
+	if result.GCD(nil, nil, AorB, s.group.n).Cmp(bigOne) != 0 {
 		return false
 	}
 	return true
 }
 
-// CalculateVerifier calculates the verifier
-func CalculateVerifier(groupName string, x *big.Int) *big.Int {
-	group := knownGroups[groupName]
-
-	i := new(big.Int)
-	return i.Exp(group.g, x, group.N)
+// Verifier retruns the verifier as calculated by the client.
+// On first enrollment, the client will need to send the verifier to the server,
+// which the server will store as its long term secret. Only a client can
+// compute the verifier as it requires knowledge of x.
+func (s *SRP) Verifier() (*big.Int, error) {
+	if s.isServer {
+		return nil, fmt.Errorf("server may not produce a verifier")
+	}
+	return s.makeVerifier()
 }
 
-// prehash is kept for compatibility with legacy implementations
-func prehash(s string) string {
-	if s == "" {
-		return ""
+// SetOthersPublic sets A if server and B if client
+// Caller *MUST* check for error status and abort the session
+// on error. This setter will invoke IsPublicValid() and error
+// status must be heeded, as other party may attempt to send
+// a malicious emphemeral public key (A or B).
+//
+// When used by the server, this sets A, when used by the client
+// it sets B. But caller doesn't need to worry about whether this
+// is A or B. Instead the caller just needs to know that they
+// are setting the public ephemeral key received from the other party.
+func (s *SRP) SetOthersPublic(AorB *big.Int) error {
+	if !s.IsPublicValid(AorB) {
+		s.badState = true
+		s.Key = nil
+		return fmt.Errorf("invalid public exponent")
 	}
 
-	hasher := sha256.New()
-	hasher.Write([]byte(s))
-	bits := hasher.Sum(nil)
-
-	return strings.TrimRight(base32.StdEncoding.EncodeToString(bits), "=")
-}
-
-// bytesToHex returns hexadecimal representation of the slice.
-func bytesToHex(b []byte) string {
-	return hex.EncodeToString(b)
-}
-
-// CalculateX compute X value used in SRP authentication.
-func CalculateX(method, alg, email, password string, salt []byte, iterations int, accountKey *AccountKey) (*big.Int, error) {
-	if iterations == 0 { // Using SRP Test Vectors
-		h1 := sha1.New()
-		h1.Write(salt)
-
-		h2 := sha1.New()
-		h2.Write([]byte(email + ":" + password))
-		h1.Write(h2.Sum(nil))
-
-		return NumberFromBytes(h1.Sum(nil)), nil
-	}
-
-	if accountKey == nil {
-		return nil, errors.New("missing AccountKey in CalculateX")
-	}
-
-	var h func() hash.Hash
-	var keyLen int
-	var err error
-	salt, err = base64.RawURLEncoding.DecodeString(string(salt))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode salt")
-	}
-
-	if alg == "PBES2-HS512" || alg == "PBES2g-HS512" {
-		keyLen = 512 / 8
-		h = sha512.New
-	} else if alg == "PBES2-HS256" || alg == "PBES2g-HS256" {
-		keyLen = 256 / 8
-		h = sha256.New
+	if s.isServer {
+		s.ephemeralPublicA.Set(AorB)
 	} else {
-		return nil, fmt.Errorf("invalid SRP alg: %q", alg)
+		s.ephemeralPublicB.Set(AorB)
 	}
+	return nil
+}
 
-	if strings.HasPrefix(method, "SRP-") {
-		derivedBits := pbkdf2.Key([]byte(prehash(password)), salt, iterations, keyLen, h)
-		combined := accountKey.CombineWithBytes(derivedBits)
-
-		hasher := sha1.New()
-
-		hasher.Write(salt)
-		hasher.Write([]byte(email + ":" + bytesToHex(combined)))
-		return NumberFromBytes(hasher.Sum(nil)), nil
+// MakeKey creates and returns the session Key
+// Once the ephemeral public key is received from the other party and properly
+// set, SRP should have enough information to compute the session key.
+//
+// If and only if, each party knowns their respective long term secret
+// (x for client, v for server) will both parties compute the same Key.
+// It is up to the caller to test that both client and server have the same
+// key. (A challange back and forth will do the job)
+func (s *SRP) MakeKey() ([]byte, error) {
+	if s.badState {
+		return nil, fmt.Errorf("we've got bad data")
 	}
-
-	if strings.HasPrefix(method, "SRPg-") {
-		emailSalt := []byte(email)
-		info := []byte(method)
-		bigSalt := make([]byte, 32)
-		if _, err := io.ReadFull(hkdf.New(sha256.New, salt, emailSalt, info), bigSalt); err != nil {
-			return nil, errors.Wrap(err, "HKDF failed")
+	if s.group == nil {
+		return nil, fmt.Errorf("group not set")
+	}
+	if !s.isUValid() {
+		if u, err := s.calculateU(); u == nil || err != nil {
+			return nil, fmt.Errorf("failed to calculate u: %s", err)
 		}
-
-		derivedBits := pbkdf2.Key([]byte(password), bigSalt, iterations, keyLen, h)
-		combined := accountKey.CombineWithBytes(derivedBits)
-
-		return NumberFromBytes(combined), nil
+	}
+	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
+		return nil, fmt.Errorf("cannot make Key with my ephemeral secret")
 	}
 
-	return nil, fmt.Errorf("invalid SRP method: %q", method)
-}
+	b := &big.Int{} // base
+	e := &big.Int{} // exponent
 
-// CalculateA computes SRP A value based on a. The a should be randomly generated using `srp.RandomNumber(32)`
-func CalculateA(groupName string, a *big.Int) *big.Int {
-	group := knownGroups[groupName]
-	result := new(big.Int)
-	return result.Exp(group.g, a, group.N)
-}
+	if s.isServer {
+		// S = (Av^u) ^ b
+		if s.v == nil || s.ephemeralPublicA == nil {
+			return nil, fmt.Errorf("not enough is known to create Key")
+		}
+		b.Exp(s.v, s.u, s.group.n)
+		b.Mul(b, s.ephemeralPublicA)
+		e = s.ephemeralPrivate
+	} else { // client
+		// (B - kg^x) ^ (a + ux)
+		if s.ephemeralPublicB == nil || s.k == nil || s.x == nil {
+			return nil, fmt.Errorf("not enough is known to create Key")
+		}
+		e.Mul(s.u, s.x)
+		e.Add(e, s.ephemeralPrivate)
 
-// CalculateB calculates B according to SRP RFC
-func CalculateB(groupName string, k *big.Int, v *big.Int, randomKey *big.Int) *big.Int {
-	group := knownGroups[groupName]
-
-	result := new(big.Int)
-	result.Exp(group.g, randomKey, group.N)
-
-	m := new(big.Int)
-	m.Mul(k, v)
-
-	result.Add(m, result)
-	return result.Mod(result, group.N)
-}
-
-// CalculateClientRawKey calculates the raw key
-func CalculateClientRawKey(groupName string, a, B, u, x, k *big.Int) *big.Int {
-	group := knownGroups[groupName]
-
-	p := new(big.Int)
-	r := new(big.Int)
-	r.Mul(u, x)
-	p.Add(a, r)
-	base := new(big.Int)
-	r1 := new(big.Int)
-	r1.Exp(group.g, x, group.N)
-	r = new(big.Int)
-	r.Mul(r1, k)
-	base.Sub(B, r)
-	result := new(big.Int)
-	result.Exp(base, p, group.N)
-
-	hex := fmt.Sprintf("%x", result)
-
-	hasher := sha256.New()
-	hasher.Write([]byte(hex))
-	return NumberFromBytes(hasher.Sum(nil))
-}
-
-// CalculateRawKey calculates the raw key
-func CalculateRawKey(groupName string, A, v, b, u *big.Int) *big.Int {
-	group := knownGroups[groupName]
-
-	result := new(big.Int)
-	result.Exp(v, u, group.N)
-	result.Mul(result, A)
-	return result.Exp(result, b, group.N)
-}
-
-// NumberFromString converts a string to a number
-func NumberFromString(s string) *big.Int {
-	n := strings.Replace(s, " ", "", -1)
-
-	result := new(big.Int)
-	result.SetString(strings.TrimPrefix(n, "0x"), 16)
-
-	return result
-}
-
-// NumberFromBytes converts a byte array to a number
-func NumberFromBytes(bytes []byte) *big.Int {
-	result := new(big.Int)
-	for _, b := range bytes {
-		result.Lsh(result, 8)
-		result.Add(result, big.NewInt(int64(b)))
+		b.Exp(s.group.g, s.x, s.group.n)
+		b.Mul(b, s.k)
+		b.Sub(s.ephemeralPublicB, b)
+		b.Mod(b, s.group.n)
 	}
 
-	return result
-}
+	s.premasterKey.Exp(b, e, s.group.n)
 
-// RandomNumber returns a random number
-func RandomNumber() *big.Int {
-	bytes := make([]byte, 8)
-	rand.Read(bytes)
+	h := sha256.New()
+	h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
 
-	return NumberFromBytes(bytes)
+	s.Key = h.Sum(nil)
+
+	return s.Key, nil
 }
