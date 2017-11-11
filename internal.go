@@ -27,7 +27,9 @@ func (s *SRP) generateMySecret() *big.Int {
 	eSize := max(s.group.ExponentSize, MinExponentSize)
 	bytes := make([]byte, eSize)
 	rand.Read(bytes)
-	s.ephemeralPrivate = numberFromBtyes(bytes)
+	ephemeralPrivate := &big.Int{}
+	ephemeralPrivate.SetBytes(bytes)
+	s.ephemeralPrivate = ephemeralPrivate
 	return s.ephemeralPrivate
 }
 
@@ -44,7 +46,8 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 	h := sha256.New()
 	h.Write(s.group.n.Bytes())
 	h.Write(s.group.g.Bytes())
-	s.k = numberFromBtyes(h.Sum(nil))
+	k := &big.Int{}
+	s.k = k.SetBytes(h.Sum(nil))
 	return s.k, nil
 }
 
@@ -143,6 +146,7 @@ func (s *SRP) calculateU() (*big.Int, error) {
 
 	h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
 
-	s.u = numberFromBtyes(h.Sum(nil))
+	u := &big.Int{}
+	s.u = u.SetBytes(h.Sum(nil))
 	return s.u, nil
 }

@@ -384,7 +384,11 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 	h := sha256.New()
 	h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
 
-	s.Key = numberFromBtyes(h.Sum(nil))
+	key := &big.Int{}
+	key.SetBytes(h.Sum(nil))
+	s.Key = key
+
+	// s.Key = numberFromBtyes(h.Sum(nil))
 	return s.Key, nil
 
 }

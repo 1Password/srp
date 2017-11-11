@@ -5,17 +5,6 @@ import (
 	"strings"
 )
 
-// numberFromBtyes converts a byte array to a number
-func numberFromBtyes(bytes []byte) *big.Int {
-	result := new(big.Int)
-	for _, b := range bytes {
-		result.Lsh(result, 8)
-		result.Add(result, big.NewInt(int64(b)))
-	}
-
-	return result
-}
-
 // NumberFromString converts a string (hex) to a number
 func NumberFromString(s string) *big.Int {
 	n := strings.Replace(s, " ", "", -1)
