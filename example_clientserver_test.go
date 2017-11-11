@@ -1,6 +1,7 @@
 package srp
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"math/big"
@@ -87,7 +88,7 @@ func Example_serverClientMatch() {
 	// that each know the same key. Here we have both in the same space, so
 	// we just compare
 
-	if serverKey.Cmp(clientKey) == 0 {
+	if bytes.Equal(serverKey, clientKey) {
 		fmt.Println("Keys match")
 	} else {
 		fmt.Println("Uh oh")

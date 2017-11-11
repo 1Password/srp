@@ -158,7 +158,7 @@ type SRP struct {
 	u                *big.Int // calculated scrambling parameter
 	k                *big.Int // multiplier parameter
 	premasterKey     *big.Int // unhashed derived session secret
-	Key              *big.Int // H(premasterKey)
+	Key              []byte   // H(premasterKey)
 	isServer         bool
 	badState         bool
 }
@@ -207,7 +207,7 @@ func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 		x:                big.NewInt(0),
 		v:                big.NewInt(0),
 		premasterKey:     big.NewInt(0),
-		Key:              big.NewInt(0),
+		Key:              nil,
 		group:            group,
 		badState:         false,
 
@@ -344,7 +344,7 @@ func (s *SRP) SetOthersPublic(AorB *big.Int) error {
 // (x for client, v for server) will both parties compute the same Key.
 // It is up to the caller to test that both client and server have the same
 // key. (A challange back and forth will do the job)
-func (s *SRP) MakeKey() (*big.Int, error) {
+func (s *SRP) MakeKey() ([]byte, error) {
 	if s.badState {
 		return nil, fmt.Errorf("we've got bad data")
 	}
@@ -390,9 +390,7 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 	h := sha256.New()
 	h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
 
-	key := &big.Int{}
-	key.SetBytes(h.Sum(nil))
-	s.Key = key
+	s.Key = h.Sum(nil)
 
 	return s.Key, nil
 }
