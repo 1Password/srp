@@ -1,27 +1,16 @@
-package srp
-
-import (
-	"crypto/sha256"
-	"fmt"
-	"math/big"
-)
-
 /*
-SRP provides the primary interface to this package.
+srp Secure Remote Password protocol
 
-Because many of the inputs require checks against malicious data, many are set using
-setters instead of being public/exported in the type. This is to ensure that bad
-values do not get used.
+The principle interface provided by this package is the SRP type.
 
-Creating the SRP object with with NewSRP() takes care of generating your ephemeral
+Creating the SRP object with with NewSRPServer() or NewSRPClient() takes care of generating your ephemeral
 secret (a or b depending on whether you are a client or server), your public
 ephemeral key (A or B depending on whether you are a client or server),
-the multiplier k. (There is a setter for k if you wish to use a different scheme
-to set those.
+the multiplier k (if nil is passed as a value for k when creating).
 
 A typical use by a server might be something like
 
-	server := NewSRP(true, true, KnownGroups[RFC5054Group4096], v)
+	server := NewSRPServer(KnownGroups[RFC5054Group4096], v, nil)
 
 	A := getAfromYourClientConnection(...) // your code
 	if result, err := server.SetOthersPublic(A); result == nil || err != nil {
@@ -42,6 +31,9 @@ This still leaves some work outside of what the SRP object provides.
 3. The check that both client and server have negotiated the same Key is left outside.
 
 The SRP protocol
+
+It would be nice if this package could be used without having some understanding of the SRP protocol,
+but too much of the language and naming is depends on at least some familiarity. Here is a summary.
 
 The Secure Remote Password protocol involves a server and a client proving to
 each other that they know (or can derive) their long term secrets.
@@ -108,21 +100,25 @@ from the caller except what the caller absolutely needs to provide.
 
 The key derivation function, KDF()
 
-	v is computed by client via KDF, user secrets, and random salt, s.
+	x is computed by client via KDF, user secrets, and random salt, s.
 
 	x = KDF(...)
 	v = g^x
 
-	v is sent to the server on first enrollment.
-	The server then keeps {I, s, v} in its database.
+	v is sent to the server on first enrollment. v should be transmitted over a secure channel.
+	The server then stores {I, s, v} long term. v needs to be protected in the same way that
+	a password hash should be protected.
 */
+package srp
+
+import (
+	"crypto/sha256"
+	"fmt"
+	"math/big"
+)
 
 /*
 SRP provides the primary interface to this package.
-
-Because many of the inputs require checks against malicious data, many are set using
-setters instead of being public/exported in the type. This is to ensure that bad
-values do not get used.
 
 Creating the SRP object with with NewSRPServer()/NewSRPClient() takes care of generating your ephemeral
 secret (a or b depending on whether you are a client or server), your public
@@ -132,7 +128,7 @@ to set those.
 
 A typical use by a server might be something like
 
-	server := NewSRPServer(KnownGroups[RFC5054Group4096], v)
+	server := NewSRPServer(KnownGroups[RFC5054Group4096], v, nil)
 
 	A := getAfromYourClientConnection(...) // your code
 	if result, err := server.SetOthersPublic(A); result == nil || err != nil {
@@ -149,7 +145,7 @@ A typical use by a server might be something like
 
 This still leaves some work outside of what the SRP object provides.
 1. The key derivation of x is not handled by this object.
-2. The communication between client and server.
+2. The communication between client and server is not handled by this object.
 3. The check that both client and server have negotiated the same Key is left outside.
 
 */
