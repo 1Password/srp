@@ -1,6 +1,7 @@
 package srp
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"math/big"
@@ -58,7 +59,7 @@ func Example_serverClientMatch() {
 	}
 
 	// server can now make the key.
-	serverKey, err := server.MakeKey()
+	serverKey, err := server.Key()
 	if err != nil || serverKey == nil {
 		fmt.Printf("something went wrong making server key: %s\n", err)
 	}
@@ -78,7 +79,7 @@ func Example_serverClientMatch() {
 	}
 
 	// client can now make the session key
-	clientKey, err := client.MakeKey()
+	clientKey, err := client.Key()
 	if err != nil || clientKey == nil {
 		fmt.Printf("something went wrong making server key: %s", err)
 	}
@@ -87,7 +88,7 @@ func Example_serverClientMatch() {
 	// that each know the same key. Here we have both in the same space, so
 	// we just compare
 
-	if serverKey.Cmp(clientKey) == 0 {
+	if bytes.Equal(serverKey, clientKey) {
 		fmt.Println("Keys match")
 	} else {
 		fmt.Println("Uh oh")

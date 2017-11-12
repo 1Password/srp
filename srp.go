@@ -48,7 +48,7 @@ type SRP struct {
 	u                *big.Int // calculated scrambling parameter
 	k                *big.Int // multiplier parameter
 	premasterKey     *big.Int // unhashed derived session secret
-	Key              *big.Int // H(premasterKey)
+	key              []byte   // H(preMasterSecret)
 	isServer         bool
 	badState         bool
 }
@@ -99,7 +99,7 @@ func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 		x:                big.NewInt(0),
 		v:                big.NewInt(0),
 		premasterKey:     big.NewInt(0),
-		Key:              big.NewInt(0),
+		key:              nil,
 		group:            group,
 		badState:         false,
 
@@ -216,7 +216,7 @@ func (s *SRP) Verifier() (*big.Int, error) {
 func (s *SRP) SetOthersPublic(AorB *big.Int) error {
 	if !s.IsPublicValid(AorB) {
 		s.badState = true
-		s.Key = nil
+		s.key = nil
 		return fmt.Errorf("invalid public exponent")
 	}
 
@@ -228,7 +228,10 @@ func (s *SRP) SetOthersPublic(AorB *big.Int) error {
 	return nil
 }
 
-// MakeKey creates and returns the session Key
+// Key creates and returns the session Key
+//
+// Caller MUST check error status.
+//
 // Once the ephemeral public key is received from the other party and properly
 // set, SRP should have enough information to compute the session key.
 //
@@ -236,7 +239,10 @@ func (s *SRP) SetOthersPublic(AorB *big.Int) error {
 // (x for client, v for server) will both parties compute the same Key.
 // It is up to the caller to test that both client and server have the same
 // key. (A challange back and forth will do the job)
-func (s *SRP) MakeKey() (*big.Int, error) {
+func (s *SRP) Key() ([]byte, error) {
+	if s.key != nil {
+		return s.key, nil
+	}
 	if s.badState {
 		return nil, fmt.Errorf("we've got bad data")
 	}
@@ -282,9 +288,18 @@ func (s *SRP) MakeKey() (*big.Int, error) {
 	h := sha256.New()
 	h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
 
-	key := &big.Int{}
-	key.SetBytes(h.Sum(nil))
-	s.Key = key
+	s.key = h.Sum(nil)
 
-	return s.Key, nil
+	if len(s.key) != h.Size() {
+		return nil, fmt.Errorf("key size should be %d, but instead is %d", h.Size(), len(s.key))
+	}
+	return s.key, nil
+}
+
+// TestOnlyResetKey sets to final key back to nil. This is used only for testing
+// integration with caller
+//
+// Deprecated: This is only used for testing integration with caller. Never if real life
+func (s *SRP) TestOnlyResetKey() {
+	s.key = nil
 }

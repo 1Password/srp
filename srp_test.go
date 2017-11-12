@@ -1,6 +1,7 @@
 package srp
 
 import (
+	"bytes"
 	rand "crypto/rand"
 	"encoding/hex"
 	"math/big"
@@ -62,7 +63,7 @@ func TestCalculateClientRawKey(t *testing.T) {
 	B := NumberFromString("780a5495cbf731d2463fd01d28822e7d9ccf697c4239d5151f85666aa06b3767e0301b54cfad3bd2b526d4d8a1d96492e59c8d8ecddca96b7e288f186155ffa57b50df6bc2103b6004400b797334a22d9dd234b40142a5ab714ea6070d2ed55096049f50efba99862b72f7e7aee51ed71ba6663fff570cc713d456316f3535630e87a245f09b0791c6e687baa65bf2dfb5c17e50c250256cdad4c9851a2484e88326888060ae9578b5a60e0c85143b25f4fb4fca794e266a4359642da085672d6a3b881649a387875685aeb1ae3d809bf7818dcad596c6e29d566ae87c0ad645a0fcc2eb4f066c097670adf48cf0954918fda4dc30588261321d592f890eed87a950d387b48cf6b4a49f9d497323f683091ae6a4efe675d6bfc4393c0c3d54c9adad65b8dd3a7b7e85cd5d31e97bebc8f23b370348dab53903ec5085cbf65de5e5491f417e5bf9953f081e788f36c26cbe00664a1256c4befb00765ea7e432af189521442c186f14442b1957e444426f740f363ebda943da2bb3b18a13e2f41be9cc3ca0a1b111f6983f9b8d0ee0f4b573c6042fbc0ca029821ebe517ed0755a94f42d32b0abef9240af0f37b5fe0e90c4ca83acf91d28a7f3acff5657bf69fdb7747e380b23fd437f637da2f7ebcf8733a69a75715fe3894e1799906b48e3ae818332cf5f9533e7af5a1f065f907c8f31fe778fa2da853e69926fc551d6b3ae")
 	u := NumberFromString("dad353365f78590c1857b29f16e3a947df4707868e2dd2d2b4eafd35c8c854a1")
 	k := NumberFromString("4832374a524b354d344e424a584f42434f45544356584a484641")
-	expectedKey := NumberFromString("f6bef3d6fa5a08a849bf61041cd5b3185c16aede851c819a3644fa7e918c4da6")
+	expectedKey, _ := hex.DecodeString("f6bef3d6fa5a08a849bf61041cd5b3185c16aede851c819a3644fa7e918c4da6")
 
 	groupID := RFC5054Group4096
 	client := NewSRPClient(KnownGroups[groupID], x, k)
@@ -70,9 +71,9 @@ func TestCalculateClientRawKey(t *testing.T) {
 	client.makeA()
 	client.SetOthersPublic(B)
 	client.u = u
-	key, _ := client.MakeKey()
+	key, _ := client.Key()
 
-	if client.Key.Cmp(expectedKey) != 0 {
+	if !bytes.Equal(client.key, expectedKey) {
 		t.Errorf("key doesn't match expected key.\n%x\n!=\n%x", key, expectedKey)
 	}
 }
@@ -169,6 +170,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 
 	var err error
 	var ret *big.Int
+	var retBytes []byte
 
 	// Our calculation of k is not compatable with RFC5054
 	if server.k.Cmp(k) != 0 {
@@ -203,10 +205,10 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 
 	// Force use of test vector u
 	server.u = u
-	if ret, err = server.MakeKey(); err != nil {
+	if retBytes, err = server.Key(); err != nil {
 		t.Errorf("MakeKey failed: %s", err)
 	}
-	if ret.Cmp(server.Key) != 0 {
+	if !bytes.Equal(retBytes, server.key) {
 		t.Error("Key does not equal Key (nobody tell Ayn Rand)")
 	}
 	if premasterSecret.Cmp(server.premasterKey) != 0 {
@@ -270,8 +272,8 @@ func TestClientServerMatch(t *testing.T) {
 	server.SetOthersPublic(A)
 	client.SetOthersPublic(B)
 
-	server.MakeKey()
-	client.MakeKey()
+	serverKey, _ := server.Key()
+	clientKey, _ := client.Key()
 
 	if server.k.Cmp(client.k) != 0 {
 		t.Error("Server and Client k don't match")
@@ -279,10 +281,9 @@ func TestClientServerMatch(t *testing.T) {
 	if server.u.Cmp(client.u) != 0 {
 		t.Error("Server and Client u don't match")
 	}
-	if server.Key.Cmp(client.Key) != 0 {
+	if !bytes.Equal(serverKey, clientKey) {
 		t.Error("Server and Client keys don't match")
 	}
-
 }
 
 func TestBadA(t *testing.T) {
@@ -297,7 +298,7 @@ func TestBadA(t *testing.T) {
 		t.Error("a bad A was accepted")
 	}
 
-	key, err := server.MakeKey()
+	key, err := server.Key()
 	if err == nil {
 		t.Error("no error on key creation after bad B")
 	}
