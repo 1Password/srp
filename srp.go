@@ -27,7 +27,7 @@ A typical use by a server might be something like
 
 	sendBtoClientSomehow(server.EphemeralPublic())
 
-	if sessionKey, err := server.MakeKey(); sessionKey == nil || err != nil {
+	if sessionKey, err := server.Key(); sessionKey == nil || err != nil {
 		// something went wrong
 	}
 
@@ -36,8 +36,7 @@ A typical use by a server might be something like
 This still leaves some work outside of what the SRP object provides.
 1. The key derivation of x is not handled by this object.
 2. The communication between client and server is not handled by this object.
-3. The check that both client and server have negotiated the same Key is left outside.
-
+3. The check that both client and server have negotiated the same Key is left outside. (But might be added in future)
 */
 type SRP struct {
 	group            *Group
@@ -144,7 +143,6 @@ func (s *SRP) EphemeralPublic() *big.Int {
 	}
 	return s.ephemeralPublicA
 }
-
 
 // IsPublicValid checks to see whether public A or B is valid within the group
 // A client can do very bad things by sending a malicious A to the server.
@@ -278,4 +276,3 @@ func (s *SRP) Key() ([]byte, error) {
 	}
 	return s.key, nil
 }
-

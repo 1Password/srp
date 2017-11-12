@@ -1,34 +1,18 @@
 /*
 Package srp Secure Remote Password protocol
 
-The principle interface provided by this package is the SRP type.
+The principle interface provided by this package is the SRP type. The end aim
+of the caller is to to have an SRP server and SRP client arrive at the same
+Key. See the documentation for the SRP structure and its methods for the nitty
+gritty of use.
 
-Creating the SRP object with with NewSRPServer() or NewSRPClient() takes care of generating your ephemeral
-secret (a or b depending on whether you are a client or server), your public
-ephemeral key (A or B depending on whether you are a client or server),
-the multiplier k (if nil is passed as a value for k when creating).
+Note that while the resulting key is 32 bytes, but do not assume that it has a
+strength of a 256 bit key. The effective strength of the key depends on
+the size of the SRP group.
 
-A typical use by a server might be something like
-
-	server := NewSRPServer(KnownGroups[RFC5054Group4096], v, nil)
-
-	A := getAfromYourClientConnection(...) // your code
-	if result, err := server.SetOthersPublic(A); result == nil || err != nil {
-		// client sent a malicious A. Kill this session now
-	}
-
-	sendBtoClientSomehow(server.EphemeralPublic())
-
-	if sessionKey, err := server.MakeKey(); sessionKey == nil || err != nil {
-		// something went wrong
-	}
-
-	// You must still prove that both server and client created the same Key.
-
-This still leaves some work outside of what the SRP object provides.
-1. The key derivation of x is not handled by this object.
-2. The communication between client and server.
-3. The check that both client and server have negotiated the same Key is left outside.
+BUG(jpg): This does not use the same padding and hashing scheme as in RFC5054,
+and therefore is not interoperable with those clients and servers. Perhaps someday
+we'll add an RFC5054 mode that does that, but today is not that day.
 
 The SRP protocol
 
@@ -41,7 +25,7 @@ The client long term secret is known as "x" and the corresponding server secret,
 the verifier, is known as "v". The verifier is mathematically related to x and is
 computed by the client on first enrollment and transmistted to the server.
 
-Typically, the server will store the verifier and the client will derive x from a user
+Typically the server will store the verifier and the client will derive x from a user
 secret such as a password. Because the verifier can used like a password hash with
 respect to cracking, the derivation of x should be designed to resist password cracking
 if the verifier compromised.
@@ -108,6 +92,21 @@ The key derivation function, KDF()
 	v is sent to the server on first enrollment. v should be transmitted over a secure channel.
 	The server then stores {I, s, v} long term. v needs to be protected in the same way that
 	a password hash should be protected.
+
+User's security responsibilites
+
+The consumer is responsible for
+
+1. Both: Checking whether methods have returned without error.
+This is particularly of SRP.Key() and SetOthersPublic()
+
+2. Client: Using an appropriate key derivation function for deriving x
+from the user's password (and nudging user toward a good password)
+
+3. Server: Storing the v (send by the client on first enrollment) securely.
+A caputured v can be used to masquarade as the server and be used like a password hash in a password cracking attempt
+
+4. Both: Proving to each other that both have the same key.
 */
 package srp
 

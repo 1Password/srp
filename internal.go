@@ -35,7 +35,7 @@ func (s *SRP) generateMySecret() *big.Int {
 
 // makeLittleK initializes multiplier based on group paramaters
 // k = H(N, g)
-// This does _not_ confirm to RFC5054 padding
+// BUG(jpg): Creation of multiplier, little k, does _not_ confirm to RFC5054 padding
 func (s *SRP) makeLittleK() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
@@ -135,7 +135,7 @@ func (s *SRP) makeVerifier() (*big.Int, error) {
 }
 
 // calculateU creates a hash A and B
-// It does not use RFC 5054 compatable hashing
+// BUG(jpg): Calculation of u does not use RFC 5054 compatable padding/hashing
 func (s *SRP) calculateU() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		s.u = nil
