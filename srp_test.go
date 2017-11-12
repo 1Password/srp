@@ -71,9 +71,9 @@ func TestCalculateClientRawKey(t *testing.T) {
 	client.makeA()
 	client.SetOthersPublic(B)
 	client.u = u
-	key, _ := client.MakeKey()
+	key, _ := client.Key()
 
-	if !bytes.Equal(client.Key, expectedKey) {
+	if !bytes.Equal(client.key, expectedKey) {
 		t.Errorf("key doesn't match expected key.\n%x\n!=\n%x", key, expectedKey)
 	}
 }
@@ -205,10 +205,10 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 
 	// Force use of test vector u
 	server.u = u
-	if retBytes, err = server.MakeKey(); err != nil {
+	if retBytes, err = server.Key(); err != nil {
 		t.Errorf("MakeKey failed: %s", err)
 	}
-	if !bytes.Equal(retBytes, server.Key) {
+	if !bytes.Equal(retBytes, server.key) {
 		t.Error("Key does not equal Key (nobody tell Ayn Rand)")
 	}
 	if premasterSecret.Cmp(server.premasterKey) != 0 {
@@ -272,8 +272,8 @@ func TestClientServerMatch(t *testing.T) {
 	server.SetOthersPublic(A)
 	client.SetOthersPublic(B)
 
-	serverKey, _ := server.MakeKey()
-	clientKey, _ := client.MakeKey()
+	serverKey, _ := server.Key()
+	clientKey, _ := client.Key()
 
 	if server.k.Cmp(client.k) != 0 {
 		t.Error("Server and Client k don't match")
@@ -298,7 +298,7 @@ func TestBadA(t *testing.T) {
 		t.Error("a bad A was accepted")
 	}
 
-	key, err := server.MakeKey()
+	key, err := server.Key()
 	if err == nil {
 		t.Error("no error on key creation after bad B")
 	}

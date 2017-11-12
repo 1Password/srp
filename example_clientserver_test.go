@@ -59,7 +59,7 @@ func Example_serverClientMatch() {
 	}
 
 	// server can now make the key.
-	serverKey, err := server.MakeKey()
+	serverKey, err := server.Key()
 	if err != nil || serverKey == nil {
 		fmt.Printf("something went wrong making server key: %s\n", err)
 	}
@@ -79,7 +79,7 @@ func Example_serverClientMatch() {
 	}
 
 	// client can now make the session key
-	clientKey, err := client.MakeKey()
+	clientKey, err := client.Key()
 	if err != nil || clientKey == nil {
 		fmt.Printf("something went wrong making server key: %s", err)
 	}
