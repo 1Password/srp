@@ -145,23 +145,6 @@ func (s *SRP) EphemeralPublic() *big.Int {
 	return s.ephemeralPublicA
 }
 
-// TestOnlyResetEphemeralPublic should only be used when constructing
-// tests of SRP integration with the consumer.
-//
-// Deprecated: This is for testing only. It is not meant to
-// be used in real code, and may disappear at any moment.
-func (s *SRP) TestOnlyResetEphemeralPublic() {
-	s.ephemeralPublicA.Set(bigZero)
-}
-
-// TestOnlySetEphemeralSecret should only be used when constructing
-// tests of SRP integration with the consumer.
-//
-// Deprecated: This is for testing only. It is not meant to
-// be used in real code, and may disappear at any moment.
-func (s *SRP) TestOnlySetEphemeralSecret(secret *big.Int) {
-	s.ephemeralPrivate.Set(secret)
-}
 
 // IsPublicValid checks to see whether public A or B is valid within the group
 // A client can do very bad things by sending a malicious A to the server.
@@ -296,10 +279,3 @@ func (s *SRP) Key() ([]byte, error) {
 	return s.key, nil
 }
 
-// TestOnlyResetKey sets to final key back to nil. This is used only for testing
-// integration with caller
-//
-// Deprecated: This is only used for testing integration with caller. Never if real life
-func (s *SRP) TestOnlyResetKey() {
-	s.key = nil
-}
