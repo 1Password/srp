@@ -109,7 +109,7 @@ func TestNewSRPClient(t *testing.T) {
 
 }
 
-func TestSRPClient1024(t *testing.T) {
+func TestSRPVerifier1024(t *testing.T) {
 	var err error
 	var clientV *big.Int
 	x := expectedX
@@ -252,7 +252,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 func TestClientServerMatch(t *testing.T) {
 	var err error
 	var v *big.Int
-	groupID := RFC5054Group4096
+	groupID := RFC5054Group2048
 
 	xbytes := make([]byte, 32)
 	rand.Read(xbytes)
@@ -292,7 +292,7 @@ func TestBadA(t *testing.T) {
 	v := &big.Int{}
 	v.SetBytes(xbytes)
 
-	server := NewSRPServer(KnownGroups[RFC5054Group4096], v, nil)
+	server := NewSRPServer(KnownGroups[RFC5054Group2048], v, nil)
 
 	if err := server.SetOthersPublic(server.group.n); err == nil {
 		t.Error("a bad A was accepted")

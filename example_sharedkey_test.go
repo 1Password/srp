@@ -25,9 +25,9 @@ func Example() {
 
 	// On first encounter between client and server, they will negotatiate
 	// an SRP group to use. We will assume that they have settled on
-	// RFC5054Group4096
+	// RFC5054Group3072
 
-	group := RFC5054Group4096
+	group := RFC5054Group3072
 
 	// The client will need a password from the user and will also need
 	// a salt.
