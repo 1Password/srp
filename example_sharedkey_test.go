@@ -10,7 +10,7 @@ import (
 )
 
 // ExampleServerClientKey is an example
-func ExampleServerClientKey() {
+func Example_createUseSharedKey() {
 
 	// This example has both a server and the corresponding client live
 	// in the same function. That is not something you would normally do.
@@ -127,18 +127,22 @@ func ExampleServerClientKey() {
 	serverBlock, _ := aes.NewCipher(serverKey) // set with server's key
 	serverCryptor, _ := cipher.NewGCM(serverBlock)
 
+	// The client can set up its own cryptor. Note that it uses
+	// the key that it (the client) got from SRP
+	clientBlock, _ := aes.NewCipher(clientKey) // with the Client's key
+	clientCryptor, _ := cipher.NewGCM(clientBlock)
+
 	// We will use GCM with a 12 byte nonce for this example
-	// NEVER use the same nonce twice.
+	// NEVER use the same nonce twice with the same key. Never.
 	nonce := make([]byte, 12)
 	rand.Read(nonce)
 
 	plaintext := []byte("Hi client! Will you be my Valintine?")
 	ciphertext := serverCryptor.Seal(nil, nonce, plaintext, nil)
+	// You can use serverCryptor several times to encrypt new messages
+	// but with GCM you MUST use a new nonce for each encryption.
 
 	// Server sends the the ciphertext and the nonce to the client
-	// Client sets up its cryptor with its key
-	clientBlock, _ := aes.NewCipher(clientKey) // with the Client's key
-	clientCryptor, _ := cipher.NewGCM(clientBlock)
 
 	message, err := clientCryptor.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
