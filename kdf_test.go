@@ -1,6 +1,7 @@
 package srp
 
 import (
+	"bytes"
 	"encoding/hex"
 	"strings"
 	"testing"
@@ -26,12 +27,13 @@ var aliceVector = rfc5054TestVector{
 // on computations given the derived x
 func TestKDFRFC5054(t *testing.T) {
 	vec := aliceVector
-	expX := NumberFromString(vec.expectedX)
+	vec.expectedX = strings.Replace(vec.expectedX, " ", "", -1)
+	expX, _ := hex.DecodeString(vec.expectedX)
 	vec.salt = strings.Replace(vec.salt, " ", "", -1)
 	s, _ := hex.DecodeString(vec.salt)
 
 	x := KDFRFC5054(s, vec.I, vec.P)
-	if expX.Cmp(x) != 0 {
+	if !bytes.Equal(expX, x) {
 		t.Error("didn't derive correct x")
 	}
 

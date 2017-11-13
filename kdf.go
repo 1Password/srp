@@ -2,7 +2,6 @@ package srp
 
 import (
 	"crypto/sha1"
-	"math/big"
 	"strings"
 	"unicode"
 
@@ -26,7 +25,7 @@ from  a username, password, and salt as described
 in RFC5054 §2.6, which says
     x = SHA1(s | SHA1(I | ":" | P))
 **/
-func KDFRFC5054(salt []byte, username string, password string) (x *big.Int) {
+func KDFRFC5054(salt []byte, username string, password string) (x []byte) {
 
 	p := []byte(PreparePassword(password))
 
@@ -43,8 +42,7 @@ func KDFRFC5054(salt []byte, username string, password string) (x *big.Int) {
 	oHasher.Write(ih)
 
 	h := oHasher.Sum(nil)
-	x = bigIntFromBytes(h)
-	return x
+	return h
 }
 
 // PreparePassword strips leading and trailing white space
