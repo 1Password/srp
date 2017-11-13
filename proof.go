@@ -52,15 +52,46 @@ func (s *SRP) M(salt []byte, uname string) ([]byte, error) {
 	return s.m, nil
 }
 
-// IsServerProved takes the post-key negotiation proof from the server
+// GoodServerProof takes the post-key negotiation proof from the server
 // and compares it with what we (the client think it should be)
-func (s *SRP) IsServerProved(salt []byte, uname string, proof []byte) bool {
+func (s *SRP) GoodServerProof(salt []byte, uname string, proof []byte) bool {
 	myM, err := s.M(salt, uname)
 	if err != nil {
 		// well that's odd. Better retrurn false if something is wrong here
+		s.isServerProved = false
 		return false
 	}
-	return bytes.Equal(myM, proof)
+	s.isServerProved = bytes.Equal(myM, proof)
+	return s.isServerProved
+}
+
+// ClientProof constructs the clients proof that it knows the key
+func (s *SRP) ClientProof() ([]byte, error) {
+	if !s.isServer && !s.isServerProved {
+		return nil, fmt.Errorf("don't construct client proof until server is proved")
+	}
+	if s.cProof != nil {
+		return s.cProof, nil
+	}
+
+	if s.ephemeralPublicA == nil || s.m == nil || s.key == nil {
+		return nil, fmt.Errorf("not enough pieces in place to construct client proof")
+	}
+	h := sha256.New()
+	h.Write(s.ephemeralPublicA.Bytes())
+	h.Write(s.m)
+	h.Write(s.key)
+	s.cProof = h.Sum(nil)
+	return s.cProof, nil
+}
+
+// GoodClientProof returns true if the given proof is the same as what we calculate
+func (s *SRP) GoodClientProof(proof []byte) bool {
+	myCP, err := s.ClientProof()
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(myCP, proof)
 }
 
 // lifted straight from https://golang.org/src/crypto/cipher/xor.go
