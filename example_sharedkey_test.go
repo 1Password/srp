@@ -21,6 +21,8 @@ func Example_createUseSharedKey() {
 	var err error
 	var A, B *big.Int
 
+	/*** Part 1: First encounter. Enrollment ***/
+
 	// On first encounter between client and server, they will negotatiate
 	// an SRP group to use. We will assume that they have settled on
 	// RFC5054Group4096
@@ -59,8 +61,9 @@ func Example_createUseSharedKey() {
 	// Server will store long term the salt, username, an identifier for the SRP group
 	// used and v. It should store v securely.
 
-	// Some time later, we actually want to authenticate with this stuff
+	/*** Part 2: An authentication session ***/
 
+	// Some time later, we actually want to authenticate with this stuff
 	// Client and server may talk. Depending on what the client has locally,
 	// The client may need to be told it's salt, and the SRP group to use
 	// But here we will assume that that the client knows this, and already has
@@ -114,8 +117,13 @@ func Example_createUseSharedKey() {
 		fmt.Printf("something went wrong making server key: %s", err)
 	}
 
+	/*** Part 3: Server and client prove they have the same key ***/
 	// In normal usage, server and client would send challenges to prove
 	// that each know the same key.
+
+	// You are on your own for this. (I really should add help for this.)
+
+	/*** Part 4: Server and Client exchange secret messages ***/
 
 	// Once you have confirmed that client and server are using the same key
 	// (thus proving that x and v have the right relation to each other)
