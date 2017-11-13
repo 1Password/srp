@@ -10,7 +10,7 @@ import (
 )
 
 // ExampleServerClientKey is an example
-func Example_createUseSharedKey() {
+func Example() {
 
 	// This example has both a server and the corresponding client live
 	// in the same function. That is not something you would normally do.
@@ -118,10 +118,35 @@ func Example_createUseSharedKey() {
 	}
 
 	/*** Part 3: Server and client prove they have the same key ***/
-	// In normal usage, server and client would send challenges to prove
-	// that each know the same key.
 
-	// You are on your own for this. (I really should add help for this.)
+	// Server computes a proof, and sends it to the client
+
+	serverProof, err := server.M(salt, username)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// client tests tests that the server sent a good proof
+	if !client.GoodServerProof(salt, username, serverProof) {
+		err = fmt.Errorf("bad proof from server")
+		fmt.Println(err)
+		// Client must bail and not send a its own proof back to the server
+		log.Fatal(err)
+	}
+
+	// Only after having a valid server proof will the client construct its own
+	clientProof, err := client.ClientProof()
+	if err != nil {
+		fmt.Println(err)
+		log.Fatal(err)
+	}
+
+	// client sends its proof to the server. Server checks
+	if !server.GoodClientProof(clientProof) {
+		err = fmt.Errorf("bad proof from client")
+		fmt.Println(err)
+		log.Fatal(err)
+	}
 
 	/*** Part 4: Server and Client exchange secret messages ***/
 
@@ -145,10 +170,11 @@ func Example_createUseSharedKey() {
 	nonce := make([]byte, 12)
 	rand.Read(nonce)
 
-	plaintext := []byte("Hi client! Will you be my Valintine?")
+	plaintext := []byte("Hi client! Will you be my Valentine?")
 	ciphertext := serverCryptor.Seal(nil, nonce, plaintext, nil)
-	// You can use serverCryptor several times to encrypt new messages
-	// but with GCM you MUST use a new nonce for each encryption.
+	// You can use the same serverCryptor many times within a session,
+	// (up to about 2^32) for different encryptions
+	// but you MUST use a new nonce for each encryption.
 
 	// Server sends the the ciphertext and the nonce to the client
 
@@ -162,5 +188,26 @@ func Example_createUseSharedKey() {
 	// If the message is successfully decrypted, then client and server
 	// can talk to each other using the key they derived
 	fmt.Printf("%s\n", message)
-	// Output: Hi client! Will you be my Valintine?
+	// Output: Hi client! Will you be my Valentine?
+
+	// Client must generate a new nonce for all messages it sends.
+	// It MUST NOT reuse the nonce that was used in the message
+	// it received when encrypting a different message.
+
+	rand.Read(nonce) // get a fresh nonce
+	reply := []byte("Send me chocolate, not bits!")
+
+	replyCipherText := clientCryptor.Seal(nil, nonce, reply, nil)
+	// Note that this is a new nonce.
+
+	// client sends the new nonce and the reply to the server.
+
+	plainReply, err := serverCryptor.Open(nil, nonce, replyCipherText, nil)
+	if err != nil {
+		fmt.Printf("Decryption failed: %s", err)
+		log.Fatal(err)
+	}
+	fmt.Printf("%s\n", plainReply)
+	// Output: Hi client! Will you be my Valentine?
+	// Send me chocolate, not bits!
 }
