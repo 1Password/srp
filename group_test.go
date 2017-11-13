@@ -54,7 +54,8 @@ func checkGroup(group Group) error {
 	q := new(big.Int)
 	q.Sub(group.n, bigOne)
 	q.Div(q, big.NewInt(2))
-	if z = z.Exp(group.g, q, group.n); z.Cmp(bigOne) != 0 {
+	result := new(big.Int).Exp(group.g, q, group.n)
+	if result.Cmp(bigOne) != 0 {
 		return errors.New("g doesn't appear to be in right subgroup")
 	}
 	*/
