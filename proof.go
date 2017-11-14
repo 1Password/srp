@@ -21,7 +21,7 @@ slice (without padding to size of N)
 
 // M returns the server's proof of knowledge of key
 func (s *SRP) M(salt []byte, uname string) ([]byte, error) {
-	if s.m != nil {
+	if s.m != nil || len(s.m) != 0 {
 		return s.m, nil
 	}
 	if s.key == nil {
