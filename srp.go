@@ -19,22 +19,34 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-type srpgroup struct {
+type SrpGroup struct {
 	g, N *big.Int
 }
 
-var knownGroups map[string]*srpgroup
+// KnownGroups is a map from strings to Diffie-Hellman group parameters
+var KnownGroups = make(map[string]*SrpGroup)
 
 func init() {
-	// g1024 is used for unit tests only
-	g1024 := &srpgroup{g: big.NewInt(2), N: new(big.Int)}
-	g1024.N.SetString("EEAF0AB9ADB38DD69C33F80AFA8FC5E86072618775FF3C0B9EA2314C"+
-		"9C256576D674DF7496EA81D3383B4813D692C6E0E0D5D8E250B98BE4"+
-		"8E495C1D6089DAD15DC7D7B46154D6B6CE8EF4AD69B15D4982559B29"+
-		"7BCF1885C529F566660E57EC68EDBC3C05726CC02FD4CBF4976EAA9A"+
-		"FD5138FE8376435B9FC61D2FC0EB06E3", 16)
+	g3072 := &SrpGroup{g: big.NewInt(2), N: new(big.Int)}
+	g3072.N.SetString("FFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"+
+		"29024E088A67CC74020BBEA63B139B22514A08798E3404DD"+
+		"EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"+
+		"E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"+
+		"EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D"+
+		"C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F"+
+		"83655D23DCA3AD961C62F356208552BB9ED529077096966D"+
+		"670C354E4ABC9804F1746C08CA18217C32905E462E36CE3B"+
+		"E39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9"+
+		"DE2BCBF6955817183995497CEA956AE515D2261898FA0510"+
+		"15728E5A8AAAC42DAD33170D04507A33A85521ABDF1CBA64"+
+		"ECFB850458DBEF0A8AEA71575D060C7DB3970F85A6E1E4C7"+
+		"ABF5AE8CDB0933D71E8C94E04A25619DCEE3D2261AD2EE6B"+
+		"F12FFA06D98A0864D87602733EC86A64521F2B18177B200C"+
+		"BBE117577A615D6C770988C0BAD946E208E24FA074E5AB31"+
+		"43DB5BFCE0FD108E4B82D120A93AD2CAFFFFFFFFFFFFFFFF", 16)
 
-	g4096 := &srpgroup{g: big.NewInt(5), N: new(big.Int)}
+	// RFC 3526 id 16
+	g4096 := &SrpGroup{g: big.NewInt(5), N: new(big.Int)}
 	g4096.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -55,7 +67,8 @@ func init() {
 		"D5B05AA993B4EA988D8FDDC186FFB7DC90A6C08F4DF435C934063199"+
 		"FFFFFFFFFFFFFFFF", 16)
 
-	g6144 := &srpgroup{g: big.NewInt(5), N: new(big.Int)}
+	// RFC 3526 group id 17
+	g6144 := &SrpGroup{g: big.NewInt(5), N: new(big.Int)}
 	g6144.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -85,7 +98,8 @@ func init() {
 		"387FE8D76E3C0468043E8F663F4860EE12BF2D5B0B7474D6E694F91E"+
 		"6DCC4024FFFFFFFFFFFFFFFF", 16)
 
-	g8192 := &srpgroup{g: big.NewInt(19), N: new(big.Int)}
+	// RFC 3526 group id 18
+	g8192 := &SrpGroup{g: big.NewInt(19), N: new(big.Int)}
 	g8192.N.SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08"+
 		"8A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B"+
 		"302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9"+
@@ -124,11 +138,11 @@ func init() {
 		"FC026E479558E4475677E9AA9E3050E2765694DFC81F56E880B96E71"+
 		"60C980DD98EDD3DFFFFFFFFFFFFFFFFF", 16)
 
-	knownGroups = make(map[string]*srpgroup)
-	knownGroups["1024"] = g1024
-	knownGroups["4096"] = g4096
-	knownGroups["6144"] = g6144
-	knownGroups["8192"] = g8192
+	// KnownGroups = make(map[string]*SrpGroup)
+	KnownGroups["3027"] = g3072
+	KnownGroups["4096"] = g4096
+	KnownGroups["6144"] = g6144
+	KnownGroups["8192"] = g8192
 }
 
 // AmodNisValid determines if "A mod N" is valid for the given
@@ -136,7 +150,7 @@ func init() {
 func AmodNisValid(A *big.Int, groupName string) bool {
 	result := big.Int{}
 
-	group := knownGroups[groupName]
+	group := KnownGroups[groupName]
 	if group == nil {
 		return false
 	}
@@ -150,7 +164,7 @@ func AmodNisValid(A *big.Int, groupName string) bool {
 
 // CalculateVerifier calculates the verifier
 func CalculateVerifier(groupName string, x *big.Int) *big.Int {
-	group := knownGroups[groupName]
+	group := KnownGroups[groupName]
 
 	i := new(big.Int)
 	return i.Exp(group.g, x, group.N)
@@ -239,14 +253,14 @@ func CalculateX(method, alg, email, password string, salt []byte, iterations int
 
 // CalculateA computes SRP A value based on a. The a should be randomly generated using `srp.RandomNumber(32)`
 func CalculateA(groupName string, a *big.Int) *big.Int {
-	group := knownGroups[groupName]
+	group := KnownGroups[groupName]
 	result := new(big.Int)
 	return result.Exp(group.g, a, group.N)
 }
 
 // CalculateB calculates B according to SRP RFC
 func CalculateB(groupName string, k *big.Int, v *big.Int, randomKey *big.Int) *big.Int {
-	group := knownGroups[groupName]
+	group := KnownGroups[groupName]
 
 	result := new(big.Int)
 	result.Exp(group.g, randomKey, group.N)
@@ -260,7 +274,7 @@ func CalculateB(groupName string, k *big.Int, v *big.Int, randomKey *big.Int) *b
 
 // CalculateClientRawKey calculates the raw key
 func CalculateClientRawKey(groupName string, a, B, u, x, k *big.Int) *big.Int {
-	group := knownGroups[groupName]
+	group := KnownGroups[groupName]
 
 	p := new(big.Int)
 	r := new(big.Int)
@@ -284,7 +298,7 @@ func CalculateClientRawKey(groupName string, a, B, u, x, k *big.Int) *big.Int {
 
 // CalculateRawKey calculates the raw key
 func CalculateRawKey(groupName string, A, v, b, u *big.Int) *big.Int {
-	group := knownGroups[groupName]
+	group := KnownGroups[groupName]
 
 	result := new(big.Int)
 	result.Exp(v, u, group.N)
