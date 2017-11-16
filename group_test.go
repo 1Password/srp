@@ -50,15 +50,16 @@ func checkGroup(group Group) error {
 	 * h^q ≡ 1 mod N.
 	**/
 
-	/* But these tests are failing
-	q := new(big.Int)
-	q.Sub(group.n, bigOne)
-	q.Div(q, big.NewInt(2))
-	result := new(big.Int).Exp(group.g, q, group.n)
-	if result.Cmp(bigOne) != 0 {
-		return errors.New("g doesn't appear to be in right subgroup")
+	/* But these tests are failing */
+	if false {
+		q := new(big.Int).Set(group.n)
+		q.Add(q, big.NewInt(-1))
+		q.Div(q, big.NewInt(2))
+		result := new(big.Int).Exp(group.g, q, group.n)
+		if result.Cmp(bigOne) != 0 {
+			return errors.New("g doesn't appear to be in right subgroup")
+		}
 	}
-	*/
 
 	return nil
 }
