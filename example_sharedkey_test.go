@@ -211,3 +211,8 @@ func Example() {
 	// Output: S -> C: Hi client! Will you be my Valentine?
 	// C -> S: Send me chocolate, not bits!
 }
+
+/**
+ ** Copyright 2017 AgileBits, Inc.
+ ** Licensed under the Apache License, Version 2.0 (the "License").
+ **/

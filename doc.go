@@ -11,10 +11,6 @@ of the caller is to to have an SRP server and SRP client arrive at the same
 Key. See the documentation for the SRP structure and its methods for the nitty
 gritty of use.
 
-Note that while the resulting key is 32 bytes, but do not assume that it has a
-strength of a 256 bit key. The effective strength of the key depends on
-the size of the SRP group.
-
 BUG(jpg): This does not use the same padding and hashing scheme as in RFC5054,
 and therefore is not interoperable with those clients and servers. Perhaps someday
 we'll add an RFC5054 mode that does that, but today is not that day.
@@ -112,7 +108,8 @@ from the user's password (and nudging user toward a good password)
 3. Server: Storing the v (send by the client on first enrollment) securely.
 A captured v can be used to masquerade as the server and be used like a password hash in a password cracking attempt
 
-4. Both: Proving to each other that both have the same key.
+4. Both: Proving to each other that both have the same key. The package includes methods
+that can assist with that.
 */
 package srp
 
