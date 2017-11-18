@@ -187,7 +187,7 @@ func Example() {
 
 	// If the message is successfully decrypted, then client and server
 	// can talk to each other using the key they derived
-	fmt.Printf("%s\n", message)
+	fmt.Printf("S -> C: %s\n", message)
 	// Output: Hi client! Will you be my Valentine?
 
 	// Client must generate a new nonce for all messages it sends.
@@ -207,7 +207,7 @@ func Example() {
 		fmt.Printf("Decryption failed: %s", err)
 		log.Fatal(err)
 	}
-	fmt.Printf("%s\n", plainReply)
-	// Output: Hi client! Will you be my Valentine?
-	// Send me chocolate, not bits!
+	fmt.Printf("C -> S: %s\n", plainReply)
+	// Output: S -> C: Hi client! Will you be my Valentine?
+	// C -> S: Send me chocolate, not bits!
 }

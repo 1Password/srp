@@ -1,6 +1,12 @@
 package srp
 
 // package documentation is in doc.go
+
+/**
+ ** Copyright 2017 AgileBits, Inc.
+ ** Licensed under the Apache License, Version 2.0 (the "License").
+ **/
+
 import (
 	"crypto/sha256"
 	"fmt"
