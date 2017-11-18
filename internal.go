@@ -150,3 +150,8 @@ func (s *SRP) calculateU() (*big.Int, error) {
 	s.u = u.SetBytes(h.Sum(nil))
 	return s.u, nil
 }
+
+/**
+ ** Copyright 2017 AgileBits, Inc.
+ ** Licensed under the Apache License, Version 2.0 (the "License").
+ **/
