@@ -15,13 +15,16 @@ func NumberFromString(s string) *big.Int {
 	return result
 }
 
-// max of two integers
+// max of integer arguments
 // (because go doesn't give me "a > b ? a : b" )
-func maxInt(a, b int) int {
-	if a > b {
-		return a
+func maxInt(n1 int, nums ...int) int {
+	max := n1
+	for _, n := range nums {
+		if n > max {
+			max = n
+		}
 	}
-	return b
+	return max
 }
 
 // bigIntFromBytes converts a byte array to a number

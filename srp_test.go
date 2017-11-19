@@ -308,6 +308,28 @@ func TestBadA(t *testing.T) {
 
 }
 
+func TestMaxInt(t *testing.T) {
+	if maxInt(38, 32) != 38 {
+		t.Error("maxInt is wrong")
+	}
+
+	if maxInt(32, 38) != 38 {
+		t.Error("maxInt is wrong")
+	}
+
+	if maxInt(38) != 38 {
+		t.Error("maxInt is wrong")
+	}
+
+	if maxInt(0, 40, 32, 32, 40) != 40 {
+		t.Error("maxInt is wrong")
+	}
+
+	if maxInt(-38, -32) != -32 {
+		t.Error("maxInt is wrong")
+	}
+}
+
 /**
  ** Copyright 2017 AgileBits, Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License").
