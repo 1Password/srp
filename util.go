@@ -17,7 +17,7 @@ func NumberFromString(s string) *big.Int {
 
 // max of two integers
 // (because go doesn't give me "a > b ? a : b" )
-func max(a, b int) int {
+func maxInt(a, b int) int {
 	if a > b {
 		return a
 	}
