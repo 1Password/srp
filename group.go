@@ -208,3 +208,8 @@ func init() {
 	KnownGroups[RFC5054Group8192] = g8192
 	// DefaultGroup := g4096
 }
+
+/**
+ ** Copyright 2017 AgileBits, Inc.
+ ** Licensed under the Apache License, Version 2.0 (the "License").
+ **/

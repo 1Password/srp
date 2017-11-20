@@ -1,6 +1,12 @@
 package srp
 
 // package documentation is in doc.go
+
+/**
+ ** Copyright 2017 AgileBits, Inc.
+ ** Licensed under the Apache License, Version 2.0 (the "License").
+ **/
+
 import (
 	"crypto/sha256"
 	"fmt"
@@ -9,6 +15,11 @@ import (
 
 /*
 SRP provides the primary interface to this package.
+
+Your goal is for both your client and server to arrive at the same session key, SRP.Key(),
+while proving to each other that they each know their long term secrets (x is the client's
+secret and v is the server's secret). Although the key that you arrive at is 32 bytes, its
+strength is a function of the group size used.
 
 Creating the SRP object with with NewSRPServer()/NewSRPClient() takes care of generating your ephemeral
 secret (a or b depending on whether you are a client or server), your public
@@ -36,7 +47,6 @@ A typical use by a server might be something like
 This still leaves some work outside of what the SRP object provides.
 1. The key derivation of x is not handled by this object.
 2. The communication between client and server is not handled by this object.
-3. The check that both client and server have negotiated the same Key is left outside. (But might be added in future)
 */
 type SRP struct {
 	group            *Group
@@ -225,8 +235,13 @@ func (s *SRP) SetOthersPublic(AorB *big.Int) error {
 //
 // If and only if, each party knowns their respective long term secret
 // (x for client, v for server) will both parties compute the same Key.
-// It is up to the caller to test that both client and server have the same
-// key. (A challange back and forth will do the job)
+// Be sure to confirm that client and server have the same key before
+// using it.
+//
+// Note that although the resulting key is 256 bits, its effective strength
+// is (typically) far less and depends on the group used.
+// 8 * (SRP.Group.ExponentSize / 2) should provide a reasonable estimate if you
+// need that.
 func (s *SRP) Key() ([]byte, error) {
 	if s.key != nil {
 		return s.key, nil

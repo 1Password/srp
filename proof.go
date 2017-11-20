@@ -105,3 +105,8 @@ func safeXORBytes(dst, a, b []byte) int {
 	}
 	return n
 }
+
+/**
+ ** Copyright 2017 AgileBits, Inc.
+ ** Licensed under the Apache License, Version 2.0 (the "License").
+ **/

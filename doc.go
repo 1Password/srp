@@ -1,3 +1,8 @@
+/**
+ ** Copyright 2017 AgileBits, Inc.
+ ** Licensed under the Apache License, Version 2.0 (the "License").
+ **/
+
 /*
 Package srp Secure Remote Password protocol
 
@@ -5,10 +10,6 @@ The principle interface provided by this package is the SRP type. The end aim
 of the caller is to to have an SRP server and SRP client arrive at the same
 Key. See the documentation for the SRP structure and its methods for the nitty
 gritty of use.
-
-Note that while the resulting key is 32 bytes, but do not assume that it has a
-strength of a 256 bit key. The effective strength of the key depends on
-the size of the SRP group.
 
 BUG(jpg): This does not use the same padding and hashing scheme as in RFC5054,
 and therefore is not interoperable with those clients and servers. Perhaps someday
@@ -30,10 +31,10 @@ secret such as a password. Because the verifier can used like a password hash wi
 respect to cracking, the derivation of x should be designed to resist password cracking
 if the verifier compromised.
 
-The client and the server must both use the same Diffie-Hellman group to peform
+The client and the server must both use the same Diffie-Hellman group to perform
 their computations.
 
-The server and the client send an ephemeral public key to each other
+The server and the client each send an ephemeral public key to each other
 (The client sends A; the server sends B)
 With their private knowledge of their own ephemeral secrets (a or b) and their
 private knowledge of x (for the client) and v (for the server) along with public
@@ -48,14 +49,15 @@ for KDF)
 	N    A large safe prime (N = 2q+1, where q is prime)
 	     All arithmetic is done modulo N.
   	g    A generator modulo N
-  	k    Multiplier parameter (k = H(N, g) in SRP-6a, k = 3 for legacy SRP-6)
+  	k    Multiplier parameter (k = H(N, g) in SRP-6a;
+             k = 3 for legacy SRP-6; k is a hash of the session ID within 1Password
   	H()  One-way hash function
   	^    (Modular) Exponentiation
   	u    Random scrambling parameter
   	a,b  Secret ephemeral values
   	A,B  Public ephemeral values
   	x    Long term client secret (derived via KDF)
-	v    Long term server Verifier
+	v    Long term server Verifier (derived from x)
 	s    Salt for key derivation function
 	I    User identifiers (username, account ID, etc)
 	KDF()    Key Derivation Function
@@ -93,20 +95,21 @@ The key derivation function, KDF()
 	The server then stores {I, s, v} long term. v needs to be protected in the same way that
 	a password hash should be protected.
 
-User's security responsibilites
+User's security responsibilities
 
 The consumer is responsible for
 
 1. Both: Checking whether methods have returned without error.
-This is particularly of SRP.Key() and SetOthersPublic()
+This is particularly true of SRP.Key() and SetOthersPublic()
 
 2. Client: Using an appropriate key derivation function for deriving x
 from the user's password (and nudging user toward a good password)
 
 3. Server: Storing the v (send by the client on first enrollment) securely.
-A caputured v can be used to masquarade as the server and be used like a password hash in a password cracking attempt
+A captured v can be used to masquerade as the server and be used like a password hash in a password cracking attempt
 
-4. Both: Proving to each other that both have the same key.
+4. Both: Proving to each other that both have the same key. The package includes methods
+that can assist with that.
 */
 package srp
 

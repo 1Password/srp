@@ -24,7 +24,7 @@ methods in here.
 
 func (s *SRP) generateMySecret() *big.Int {
 
-	eSize := max(s.group.ExponentSize, MinExponentSize)
+	eSize := maxInt(s.group.ExponentSize, MinExponentSize)
 	bytes := make([]byte, eSize)
 	rand.Read(bytes)
 	ephemeralPrivate := &big.Int{}
@@ -150,3 +150,8 @@ func (s *SRP) calculateU() (*big.Int, error) {
 	s.u = u.SetBytes(h.Sum(nil))
 	return s.u, nil
 }
+
+/**
+ ** Copyright 2017 AgileBits, Inc.
+ ** Licensed under the Apache License, Version 2.0 (the "License").
+ **/
