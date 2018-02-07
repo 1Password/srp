@@ -10,7 +10,7 @@ srp is a [Go language](https://golang.org) package for Secure Remote Password (S
 
 However, the hashing and padding scheme in this package is not interoperable with those specs.
 
-It was developed by AgileBits to support part of the authentication process using in [1Password](https://1password.com/). Although there are some specific hooks and interfaces designed specifically for those purposes, this golang package may be of general use to others.
+It was developed by AgileBits to support part of the [1Password](https://1password.com/) authentication process. Although there are some hooks and interfaces designed specifically for those purposes, this golang package may be of general use to others.
 
 ## Get started
 
