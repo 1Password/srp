@@ -15,9 +15,6 @@ func TestGroups(t *testing.T) {
 		if err := checkGroup(*grp); err != nil {
 			t.Errorf("bad group %s: %s", grp.Label, err)
 		}
-		if err := generatorCheck(*grp); err != nil {
-			t.Errorf("bad group %s: %s", grp.Label, err)
-		}
 		if runVerySlowTests {
 			if err := checkGroupSlow(*grp); err != nil {
 				t.Errorf("suspicious group %s: %s", grp.Label, err)
