@@ -47,28 +47,6 @@ func checkGroup(group Group) error {
 	return nil
 }
 
-func generatorCheck(group Group) error {
-	/* My understanding of the discussion of Theorem 8.64 in Introduction to
-	 * Modern Cryptography (2nd) edition is that we should be able to test
-	 * whether g is in the big subgroup. If N is a safe prime, such
-	 * N = 2q + 1, where q is prime (so q is a Germain prime) then any
-	 * member, h, of the cyclic subgroup of order q, should statisfy
-	 * h^q ≡ 1 mod N.
-	**/
-
-	/* But these tests are failing */
-	if false {
-		q := new(big.Int).Set(group.n)
-		q.Add(q, big.NewInt(-1))
-		q.Div(q, big.NewInt(2))
-		result := new(big.Int).Exp(group.g, q, group.n)
-		if result.Cmp(bigOne) != 0 {
-			return errors.New("g doesn't appear to be in right subgroup")
-		}
-	}
-	return nil
-}
-
 // These tests are very slow. Several seconds per group
 // Also they do not defend against maliciously crafted groups
 func checkGroupSlow(group Group) error {
