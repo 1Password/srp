@@ -4,12 +4,10 @@ import (
 	"math/big"
 )
 
-// Group has a generator, g, and a modulus, N.
-// Also a Label or name that the group can call itself
+// Group is a Diffie-Hellman group and has an unexported generator and modulus.
+// It has a Label or name that the group can call itself.
 // Recommended ExponentSize (in bytes) is based on the
-// lower estimates given in section 8 of RFC3526
-// Silly golang capitialization rules mean I have
-// to call "N" something else to prevent export
+// lower estimates given in section 8 of RFC3526 for the ephemeral random exponents.
 type Group struct {
 	g, n         *big.Int
 	Label        string
@@ -47,14 +45,14 @@ const (
 	RFC5054Group8192 = 7
 )
 
-// KnownGroups is a map from strings to Diffie-Hellman group parameters
+// KnownGroups is a map from strings to Diffie-Hellman group parameters.
 var KnownGroups = make(map[int]*Group)
 
 // MinGroupSize (in bits) sets a lower bound on the size of DH groups
 // that will pass certain internal checks. Defaults to 2048
 var MinGroupSize = 2048
 
-// MinExponentSize (in bytes) for generating ephemeral private keys
+// MinExponentSize (in bytes) for generating ephemeral private keys.
 var MinExponentSize = 32
 
 func init() {

@@ -99,7 +99,7 @@ User's security responsibilities
 
 The consumer is responsible for
 
-1. Both: Checking whether methods have returned without error.
+1. Both client and server: Checking whether methods have returned without error.
 This is particularly true of SRP.Key() and SetOthersPublic()
 
 2. Client: Using an appropriate key derivation function for deriving x

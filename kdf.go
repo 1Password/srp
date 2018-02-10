@@ -15,8 +15,8 @@ import (
  */
 
 /*
-KDFRFC5054 is *not* recommended. Instead use a KDF that
-involes a hashing scheme designed for password hashing.
+KDFRFC5054 is *not* recommended. Instead use a key derivation function (KDF) that
+involves a hashing scheme designed for password hashing.
 The SRP verifier that is stored by the server is like
 a password hash with respect to crackability. Choose a KDF
 that that makes the server stored verifiers hard to crack.
@@ -25,7 +25,7 @@ This computes the client's long term secret, x
 from  a username, password, and salt as described
 in RFC5054 §2.6, which says
     x = SHA1(s | SHA1(I | ":" | P))
-**/
+*/
 func KDFRFC5054(salt []byte, username string, password string) (x *big.Int) {
 
 	p := []byte(PreparePassword(password))
