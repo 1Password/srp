@@ -44,8 +44,10 @@ A typical use by a server might be something like
 
 	// You must still prove that both server and client created the same Key.
 
-This still leaves some work outside of what the SRP object provides.
+This still leaves some work outside of what the SRP object provides:
+
 1. The key derivation of x is not handled by this object.
+
 2. The communication between client and server is not handled by this object.
 */
 type SRP struct {

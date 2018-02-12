@@ -8,18 +8,17 @@ import (
 )
 
 /*
-
-The princple srp.go file was getting too long, so I'm putting the non-exported
+The principle srp.go file was getting too long, so I'm putting the non-exported
 methods in here.
 */
 
 // generateMySecret creates the little a or b
-// According to RFC5054, this should be at least 32 bytes
-// According to RFC2631 this should be uniform in the range
+// According to RFC 5054, this should be at least 32 bytes
+// According to RFC 2631 this should be uniform in the range
 // [2, q-2], where q is the Sofie Germain prime from which
 // N was created.
-// According to RFC3526 §8 there are some specific sizes depending
-// on the group. We go with RFC3526 values if available, otherwise
+// According to RFC 3526 §8 there are some specific sizes depending
+// on the group. We go with RFC 3526 values if available, otherwise
 // a minimum of 32 bytes.
 
 func (s *SRP) generateMySecret() *big.Int {
@@ -35,7 +34,7 @@ func (s *SRP) generateMySecret() *big.Int {
 
 // makeLittleK initializes multiplier based on group paramaters
 // k = H(N, g)
-// BUG(jpg): Creation of multiplier, little k, does _not_ confirm to RFC5054 padding
+// BUG(jpg): Creation of multiplier, little k, does _not_ confirm to RFC 5054 padding
 func (s *SRP) makeLittleK() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
