@@ -15,7 +15,7 @@ methods in here.
 // generateMySecret creates the little a or b
 // According to RFC 5054, this should be at least 32 bytes
 // According to RFC 2631 this should be uniform in the range
-// [2, q-2], where q is the Sofie Germain prime from which
+// [2, q-2], where q is the Sophie Germain prime from which
 // N was created.
 // According to RFC 3526 §8 there are some specific sizes depending
 // on the group. We go with RFC 3526 values if available, otherwise
@@ -34,7 +34,7 @@ func (s *SRP) generateMySecret() *big.Int {
 
 // makeLittleK initializes multiplier based on group paramaters
 // k = H(N, g)
-// BUG(jpg): Creation of multiplier, little k, does _not_ confirm to RFC 5054 padding
+// BUG(jpg): Creation of multiplier, little k, does _not_ conform to RFC 5054 padding
 func (s *SRP) makeLittleK() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
@@ -67,13 +67,13 @@ func (s *SRP) makeA() (*big.Int, error) {
 	return result, nil
 }
 
-// makeB calculates B and returms it
+// makeB calculates B and returns it
 func (s *SRP) makeB() (*big.Int, error) {
 
 	term1 := &big.Int{}
 	term2 := &big.Int{}
 
-	// Absolute Prerequisits: Group, isServer, v
+	// Absolute Prerequisites: Group, isServer, v
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
@@ -84,7 +84,7 @@ func (s *SRP) makeB() (*big.Int, error) {
 		return nil, fmt.Errorf("v must be known before B can be calculated")
 	}
 
-	// Generatable prerequists: k, b if needed
+	// Generatable prerequisites: k, b if needed
 	if s.k.Cmp(bigZero) == 0 {
 		var err error
 		if s.k, err = s.makeLittleK(); err != nil {
@@ -135,6 +135,8 @@ func (s *SRP) makeVerifier() (*big.Int, error) {
 
 // calculateU creates a hash A and B
 // BUG(jpg): Calculation of u does not use RFC 5054 compatable padding/hashing
+// The scheme we use (see source) is to use SHA256 of the concatenation of A and B
+// each represented as a lowercase hexadecimal string.
 func (s *SRP) calculateU() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		s.u = nil
