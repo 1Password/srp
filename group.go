@@ -32,9 +32,9 @@ func (g *Group) Generator() *big.Int {
 	return g.g
 }
 
-// RFC5054 groups are listed by their numbers in Appendix A of the RFC
+// RFC 5054 groups are listed by their numbers in Appendix A of the RFC
 const (
-	// The values correspond to the numbering in Appendix A of RFC5054
+	// The values correspond to the numbering in Appendix A of RFC 5054
 	// so not using iota mechanism for numbering here.
 	RFC5054Group1024 = 1 // We won't allow this group
 	RFC5054Group1536 = 2 // We aren't going to allow this one either

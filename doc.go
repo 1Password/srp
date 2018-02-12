@@ -11,9 +11,9 @@ of the caller is to to have an SRP server and SRP client arrive at the same
 Key. See the documentation for the SRP structure and its methods for the nitty
 gritty of use.
 
-BUG(jpg): This does not use the same padding and hashing scheme as in RFC5054,
+BUG(jpg): This does not use the same padding and hashing scheme as in RFC 5054,
 and therefore is not interoperable with those clients and servers. Perhaps someday
-we'll add an RFC5054 mode that does that, but today is not that day.
+we'll add an RFC 5054 mode that does that, but today is not that day.
 
 The SRP protocol
 
