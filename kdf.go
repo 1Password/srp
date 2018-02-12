@@ -10,7 +10,7 @@ import (
 )
 
 /*
- * Best to use KDF from github/agilebits/op/cryto
+ * Best to use KDF from github/agilebits/op/crypto
  * I will import at some point
  */
 

@@ -7,7 +7,7 @@ import (
 // Group is a Diffie-Hellman group and has an unexported generator and modulus.
 // It has a Label or name that the group can call itself.
 // Recommended ExponentSize (in bytes) is based on the
-// lower estimates given in section 8 of RFC3526 for the ephemeral random exponents.
+// lower estimates given in section 8 of RFC 3526 for the ephemeral random exponents.
 type Group struct {
 	g, n         *big.Int
 	Label        string
