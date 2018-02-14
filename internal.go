@@ -32,7 +32,7 @@ func (s *SRP) generateMySecret() *big.Int {
 	return s.ephemeralPrivate
 }
 
-// makeLittleK initializes multiplier based on group paramaters
+// makeLittleK initializes multiplier based on group parameters
 // k = H(N, g)
 // BUG(jpg): Creation of multiplier, little k, does _not_ conform to RFC 5054 padding
 func (s *SRP) makeLittleK() (*big.Int, error) {
