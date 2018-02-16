@@ -207,7 +207,7 @@ func (s *SRP) Verifier() (*big.Int, error) {
 // Caller *MUST* check for error status and abort the session
 // on error. This setter will invoke IsPublicValid() and error
 // status must be heeded, as other party may attempt to send
-// a malicious emphemeral public key (A or B).
+// a malicious ephemeral public key (A or B).
 //
 // When used by the server, this sets A, when used by the client
 // it sets B. But caller doesn't need to worry about whether this
