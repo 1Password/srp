@@ -254,10 +254,15 @@ func (s *SRP) Key() ([]byte, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
-	if !s.isUValid() {
+	// Because of tests, we don't want to always recalculate u
+	if s.u == nil {
 		if u, err := s.calculateU(); u == nil || err != nil {
 			return nil, fmt.Errorf("failed to calculate u: %s", err)
 		}
+	}
+	if !s.isUValid() {
+		s.badState = true
+		return nil, fmt.Errorf("invalid u")
 	}
 	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
 		return nil, fmt.Errorf("cannot make Key with my ephemeral secret")
