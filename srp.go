@@ -255,11 +255,12 @@ func (s *SRP) Key() ([]byte, error) {
 		return nil, fmt.Errorf("group not set")
 	}
 	// Because of tests, we don't want to always recalculate u
-	if s.u == nil {
+	if !s.isUValid() {
 		if u, err := s.calculateU(); u == nil || err != nil {
 			return nil, fmt.Errorf("failed to calculate u: %s", err)
 		}
 	}
+	// We must refuse to calculate Key when u == 0
 	if !s.isUValid() {
 		s.badState = true
 		return nil, fmt.Errorf("invalid u")
