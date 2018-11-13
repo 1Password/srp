@@ -149,6 +149,9 @@ func (s *SRP) calculateU() (*big.Int, error) {
 
 	u := &big.Int{}
 	s.u = u.SetBytes(h.Sum(nil))
+	if s.u.Cmp(bigZero) == 0 {
+		return nil, fmt.Errorf("u == 0, which is a bad thing")
+	}
 	return s.u, nil
 }
 
