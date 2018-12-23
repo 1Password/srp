@@ -1,7 +1,7 @@
 package srp
 
 import (
-	"crypto/sha1"
+	"crypto/sha1" // #nosec
 	"math/big"
 	"strings"
 	"unicode"
@@ -32,13 +32,13 @@ func KDFRFC5054(salt []byte, username string, password string) (x *big.Int) {
 
 	u := []byte(PreparePassword(username))
 
-	innerHasher := sha1.New()
+	innerHasher := sha1.New() // #nosec
 	innerHasher.Write(u)
 	innerHasher.Write([]byte(":"))
 	innerHasher.Write(p)
 	ih := innerHasher.Sum(nil)
 
-	oHasher := sha1.New()
+	oHasher := sha1.New() // #nosec
 	oHasher.Write(salt)
 	oHasher.Write(ih)
 
