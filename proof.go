@@ -41,12 +41,24 @@ func (s *SRP) M(salt []byte, uname string) ([]byte, error) {
 	uHash := sha256.Sum256([]byte(uname))
 	h := sha256.New()
 
-	h.Write(groupHash[:])
-	h.Write(uHash[:])
-	h.Write(salt)
-	h.Write(s.ephemeralPublicA.Bytes())
-	h.Write(s.ephemeralPublicB.Bytes())
-	h.Write(s.key)
+	if _, err := h.Write(groupHash[:]); err != nil {
+		return nil, fmt.Errorf("failsed to write group hash to hasher: %v", err)
+	}
+	if _, err := h.Write(uHash[:]); err != nil {
+		return nil, fmt.Errorf("failsed to write u hash to hasher: %v", err)
+	}
+	if _, err := h.Write(salt); err != nil {
+		return nil, fmt.Errorf("failsed to write salt to hasher: %v", err)
+	}
+	if _, err := h.Write(s.ephemeralPublicA.Bytes()); err != nil {
+		return nil, fmt.Errorf("failsed to write A to hasher: %v", err)
+	}
+	if _, err := h.Write(s.ephemeralPublicB.Bytes()); err != nil {
+		return nil, fmt.Errorf("failsed to write B to hasher: %v", err)
+	}
+	if _, err := h.Write(s.key); err != nil {
+		return nil, fmt.Errorf("failsed to write key to hasher: %v", err)
+	}
 
 	s.m = h.Sum(nil)
 	return s.m, nil
@@ -78,9 +90,18 @@ func (s *SRP) ClientProof() ([]byte, error) {
 		return nil, fmt.Errorf("not enough pieces in place to construct client proof")
 	}
 	h := sha256.New()
-	h.Write(s.ephemeralPublicA.Bytes())
-	h.Write(s.m)
-	h.Write(s.key)
+	_, err := h.Write(s.ephemeralPublicA.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("failsed to write A to hasher: %v", err)
+	}
+	_, err = h.Write(s.m)
+	if err != nil {
+		return nil, fmt.Errorf("failsed to write M to hasher: %v", err)
+	}
+	_, err = h.Write(s.key)
+	if err != nil {
+		return nil, fmt.Errorf("failsed to write key to hasher: %v", err)
+	}
 	s.cProof = h.Sum(nil)
 	return s.cProof, nil
 }
