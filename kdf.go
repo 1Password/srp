@@ -1,7 +1,7 @@
 package srp
 
 import (
-	"crypto/sha1" // #nosec
+	"crypto/sha1" // #nosec See docs for KDFRFC5054 for warnings.
 	"math/big"
 	"strings"
 	"unicode"
@@ -51,13 +51,9 @@ func KDFRFC5054(salt []byte, username string, password string) (x *big.Int) {
 // and normalizes to unicode NFKD
 func PreparePassword(s string) string {
 	var out string
-	// step #1: normalize `NFKD`
 	out = string(norm.NFKD.Bytes([]byte(s)))
-	// step #2: trim left
 	out = strings.TrimLeftFunc(out, unicode.IsSpace)
-	// step #3: trim right
 	out = strings.TrimRightFunc(out, unicode.IsSpace)
-	// step #4: return the result
 	return out
 }
 
