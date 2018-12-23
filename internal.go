@@ -25,7 +25,11 @@ func (s *SRP) generateMySecret() *big.Int {
 
 	eSize := maxInt(s.group.ExponentSize, MinExponentSize)
 	bytes := make([]byte, eSize)
-	rand.Read(bytes)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		// If we can't get random bytes from the system, then we have no business doing anything crypto related.
+		panic(fmt.Sprintf("Failed to get random bytes: %v", err))
+	}
 	ephemeralPrivate := &big.Int{}
 	ephemeralPrivate.SetBytes(bytes)
 	s.ephemeralPrivate = ephemeralPrivate
@@ -43,8 +47,14 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 	// We will remake k, even if already created, as server needs to
 	// remake it after manually setting k
 	h := sha256.New()
-	h.Write(s.group.n.Bytes())
-	h.Write(s.group.g.Bytes())
+	_, err := h.Write(s.group.n.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("failed to write N to hasher: %v", err)
+	}
+	_, err = h.Write(s.group.g.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("failed to write g to hasher: %v", err)
+	}
 	k := &big.Int{}
 	s.k = k.SetBytes(h.Sum(nil))
 	return s.k, nil
@@ -150,7 +160,10 @@ func (s *SRP) calculateU() (*big.Int, error) {
 
 	h := sha256.New()
 
-	h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
+	_, err := h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to write to hasher: %v", err)
+	}
 
 	u := &big.Int{}
 	s.u = u.SetBytes(h.Sum(nil))
