@@ -301,7 +301,9 @@ func (s *SRP) Key() ([]byte, error) {
 	s.premasterKey.Exp(b, e, s.group.n)
 
 	h := sha256.New()
-	h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
+	if _, err := h.Write([]byte(fmt.Sprintf("%x", s.premasterKey))); err != nil {
+		return nil, fmt.Errorf("failed to write premasterKey to hasher: %v", err)
+	}
 
 	s.key = h.Sum(nil)
 
