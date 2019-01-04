@@ -254,6 +254,10 @@ func (s *SRP) Key() ([]byte, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
+	// This test is so I'm not lying to gosec wrt to G105
+	if s.group.n.Cmp(bigZero) == 0 {
+		return nil, fmt.Errorf("group has 0 modulus")
+	}
 	// Because of tests, we don't want to always recalculate u
 	if !s.isUValid() {
 		if u, err := s.calculateU(); u == nil || err != nil {
@@ -277,7 +281,7 @@ func (s *SRP) Key() ([]byte, error) {
 		if s.v == nil || s.ephemeralPublicA == nil {
 			return nil, fmt.Errorf("not enough is known to create Key")
 		}
-		b.Exp(s.v, s.u, s.group.n)
+		b.Exp(s.v, s.u, s.group.n) // #nosec G105
 		b.Mul(b, s.ephemeralPublicA)
 		e = s.ephemeralPrivate
 	} else { // client
@@ -288,7 +292,7 @@ func (s *SRP) Key() ([]byte, error) {
 		e.Mul(s.u, s.x)
 		e.Add(e, s.ephemeralPrivate)
 
-		b.Exp(s.group.g, s.x, s.group.n)
+		b.Exp(s.group.g, s.x, s.group.n) // #nosec G105
 		b.Mul(b, s.k)
 		b.Sub(s.ephemeralPublicB, b)
 		b.Mod(b, s.group.n)
@@ -297,7 +301,9 @@ func (s *SRP) Key() ([]byte, error) {
 	s.premasterKey.Exp(b, e, s.group.n)
 
 	h := sha256.New()
-	h.Write([]byte(fmt.Sprintf("%x", s.premasterKey)))
+	if _, err := h.Write([]byte(fmt.Sprintf("%x", s.premasterKey))); err != nil {
+		return nil, fmt.Errorf("failed to write premasterKey to hasher: %v", err)
+	}
 
 	s.key = h.Sum(nil)
 

@@ -25,7 +25,11 @@ func (s *SRP) generateMySecret() *big.Int {
 
 	eSize := maxInt(s.group.ExponentSize, MinExponentSize)
 	bytes := make([]byte, eSize)
-	rand.Read(bytes)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		// If we can't get random bytes from the system, then we have no business doing anything crypto related.
+		panic(fmt.Sprintf("Failed to get random bytes: %v", err))
+	}
 	ephemeralPrivate := &big.Int{}
 	ephemeralPrivate.SetBytes(bytes)
 	s.ephemeralPrivate = ephemeralPrivate
@@ -43,8 +47,14 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 	// We will remake k, even if already created, as server needs to
 	// remake it after manually setting k
 	h := sha256.New()
-	h.Write(s.group.n.Bytes())
-	h.Write(s.group.g.Bytes())
+	_, err := h.Write(s.group.n.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("failed to write N to hasher: %v", err)
+	}
+	_, err = h.Write(s.group.g.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("failed to write g to hasher: %v", err)
+	}
 	k := &big.Int{}
 	s.k = k.SetBytes(h.Sum(nil))
 	return s.k, nil
@@ -83,6 +93,10 @@ func (s *SRP) makeB() (*big.Int, error) {
 	if s.v.Cmp(bigZero) == 0 {
 		return nil, fmt.Errorf("v must be known before B can be calculated")
 	}
+	// This test is so I'm not lying to gosec wrt to G105
+	if s.group.n.Cmp(bigZero) == 0 {
+		return nil, fmt.Errorf("something is wrong if modulus is zero")
+	}
 
 	// Generatable prerequisites: k, b if needed
 	if s.k.Cmp(bigZero) == 0 {
@@ -96,11 +110,12 @@ func (s *SRP) makeB() (*big.Int, error) {
 	}
 
 	// B = kv + g^b  (term1 is kv, term2 is g^b)
-	term2.Exp(s.group.g, s.ephemeralPrivate, s.group.n)
+	// We also do some modular reduction on some of our intermediate values
+	term2.Exp(s.group.g, s.ephemeralPrivate, s.group.n) // #nosec G105
 	term1.Mul(s.k, s.v)
-	term1.Mod(term1, s.group.n) // We can work with smaller numbers through modular reduction
+	term1.Mod(term1, s.group.n)
 	s.ephemeralPublicB.Add(term1, term2)
-	s.ephemeralPublicB.Mod(s.ephemeralPublicB, s.group.n) // more modular reduction
+	s.ephemeralPublicB.Mod(s.ephemeralPublicB, s.group.n) // #nosec G105
 
 	return s.ephemeralPublicB, nil
 }
@@ -145,7 +160,10 @@ func (s *SRP) calculateU() (*big.Int, error) {
 
 	h := sha256.New()
 
-	h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
+	_, err := h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to write to hasher: %v", err)
+	}
 
 	u := &big.Int{}
 	s.u = u.SetBytes(h.Sum(nil))
