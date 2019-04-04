@@ -111,6 +111,6 @@ A captured v can be used to masquerade as the server and be used like a password
 4. Both: Proving to each other that both have the same key. The package includes methods
 that can assist with that.
 */
-package srp
+package srp // import "github.com/1password/srp"
 
 // This file is just for the package documentation
