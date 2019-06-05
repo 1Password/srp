@@ -1,7 +1,7 @@
 package srp
 
 import (
-	"bytes"
+	"crypto/subtle"
 	"crypto/sha256"
 	"fmt"
 )
@@ -73,7 +73,7 @@ func (s *SRP) GoodServerProof(salt []byte, uname string, proof []byte) bool {
 		s.isServerProved = false
 		return false
 	}
-	s.isServerProved = bytes.Equal(myM, proof)
+	s.isServerProved = subtle.ConstantTimeCompare(myM, proof) == 1
 	return s.isServerProved
 }
 
@@ -112,7 +112,7 @@ func (s *SRP) GoodClientProof(proof []byte) bool {
 	if err != nil {
 		return false
 	}
-	return bytes.Equal(myCP, proof)
+	return subtle.ConstantTimeCompare(myCP, proof) == 1
 }
 
 // lifted straight from https://golang.org/src/crypto/cipher/xor.go
