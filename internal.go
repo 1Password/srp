@@ -154,7 +154,7 @@ func (s *SRP) makeVerifier() (*big.Int, error) {
 // BUG(jpg): Calculation of u does not use RFC 5054 compatable padding/hashing
 // The scheme we use (see source) is to use SHA256 of the concatenation of A and B
 // each represented as a lowercase hexadecimal string.
-// additionally those hex strings have leading "0" removed even if that makes them of odd length
+// Additionally those hex strings have leading "0" removed even if that makes them of odd length
 func (s *SRP) calculateU() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		s.u = nil
@@ -195,6 +195,6 @@ func serverStyleHexFromBigInt(bn *big.Int) string {
 }
 
 /**
- ** Copyright 2017 AgileBits, Inc.
+ ** Copyright 2017, 2020 AgileBits, Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License").
  **/
