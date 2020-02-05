@@ -163,10 +163,8 @@ func (s *SRP) calculateU() (*big.Int, error) {
 
 	h := sha256.New()
 
-	// Explicitely (instead of implicitly) trim leading "0"s from the hex representations
-	// For historical reasons clients expect this, but we are now doing so explicitly
-	trimmedHexPublicA := strings.TrimLeft(hex.EncodeToString(s.ephemeralPublicA.Bytes()), "0")
-	trimmedHexPublicB := strings.TrimLeft(hex.EncodeToString(s.ephemeralPublicB.Bytes()), "0")
+	trimmedHexPublicA := serverStyleHexFromBigInt(s.ephemeralPublicA)
+	trimmedHexPublicB := serverStyleHexFromBigInt(s.ephemeralPublicB)
 
 	_, err := h.Write([]byte(fmt.Sprintf("%s%s", trimmedHexPublicA, trimmedHexPublicB)))
 	if err != nil {
@@ -179,6 +177,21 @@ func (s *SRP) calculateU() (*big.Int, error) {
 		return nil, fmt.Errorf("u == 0, which is a bad thing")
 	}
 	return s.u, nil
+}
+
+// Convert a bigInt to a lowercase hex string with leading "0"s removed.
+// We do this explicitly instead of as an artifact of fmt.Sprintf
+func serverStyleHexFromBigInt(bn *big.Int) string {
+
+	// Don't worry. The compiler will build things the same even if we didn't create
+	// all of the intermediate variables below. And this better communicates all thes
+	// things we are doing to construct these strings
+	b := bn.Bytes()
+	h := hex.EncodeToString(b)
+	l := strings.ToLower(h)
+	res := strings.TrimLeft(l, "0")
+
+	return res
 }
 
 /**
