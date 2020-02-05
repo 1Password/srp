@@ -3,8 +3,10 @@ package srp
 import (
 	rand "crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 )
 
 /*
@@ -152,6 +154,7 @@ func (s *SRP) makeVerifier() (*big.Int, error) {
 // BUG(jpg): Calculation of u does not use RFC 5054 compatable padding/hashing
 // The scheme we use (see source) is to use SHA256 of the concatenation of A and B
 // each represented as a lowercase hexadecimal string.
+// additionally those hex strings have leading "0" removed even if that makes them of odd length
 func (s *SRP) calculateU() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		s.u = nil
@@ -160,7 +163,12 @@ func (s *SRP) calculateU() (*big.Int, error) {
 
 	h := sha256.New()
 
-	_, err := h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
+	// Explicitely (instead of implicitly) trim leading "0"s from the hex representations
+	// For historical reasons clients expect this, but we are now doing so explicitly
+	trimmedHexPublicA := strings.TrimLeft(hex.EncodeToString(s.ephemeralPublicA.Bytes()), "0")
+	trimmedHexPublicB := strings.TrimLeft(hex.EncodeToString(s.ephemeralPublicB.Bytes()), "0")
+
+	_, err := h.Write([]byte(fmt.Sprintf("%s%s", trimmedHexPublicA, trimmedHexPublicB)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to write to hasher: %v", err)
 	}
