@@ -3,8 +3,10 @@ package srp
 import (
 	rand "crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 )
 
 /*
@@ -152,6 +154,7 @@ func (s *SRP) makeVerifier() (*big.Int, error) {
 // BUG(jpg): Calculation of u does not use RFC 5054 compatable padding/hashing
 // The scheme we use (see source) is to use SHA256 of the concatenation of A and B
 // each represented as a lowercase hexadecimal string.
+// Additionally those hex strings have leading "0" removed even if that makes them of odd length
 func (s *SRP) calculateU() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		s.u = nil
@@ -160,7 +163,10 @@ func (s *SRP) calculateU() (*big.Int, error) {
 
 	h := sha256.New()
 
-	_, err := h.Write([]byte(fmt.Sprintf("%x%x", s.ephemeralPublicA, s.ephemeralPublicB)))
+	trimmedHexPublicA := serverStyleHexFromBigInt(s.ephemeralPublicA)
+	trimmedHexPublicB := serverStyleHexFromBigInt(s.ephemeralPublicB)
+
+	_, err := h.Write([]byte(fmt.Sprintf("%s%s", trimmedHexPublicA, trimmedHexPublicB)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to write to hasher: %v", err)
 	}
@@ -173,7 +179,22 @@ func (s *SRP) calculateU() (*big.Int, error) {
 	return s.u, nil
 }
 
+// Convert a bigInt to a lowercase hex string with leading "0"s removed.
+// We do this explicitly instead of as an artifact of fmt.Sprintf
+func serverStyleHexFromBigInt(bn *big.Int) string {
+
+	// Don't worry. The compiler will build things the same even if we didn't create
+	// all of the intermediate variables below. And this better communicates all thes
+	// things we are doing to construct these strings
+	b := bn.Bytes()
+	h := hex.EncodeToString(b)
+	l := strings.ToLower(h)
+	res := strings.TrimLeft(l, "0")
+
+	return res
+}
+
 /**
- ** Copyright 2017 AgileBits, Inc.
+ ** Copyright 2017, 2020 AgileBits, Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License").
  **/
