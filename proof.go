@@ -69,7 +69,7 @@ func (s *SRP) M(salt []byte, uname string) ([]byte, error) {
 func (s *SRP) GoodServerProof(salt []byte, uname string, proof []byte) bool {
 	myM, err := s.M(salt, uname)
 	if err != nil {
-		// well that's odd. Better retrurn false if something is wrong here
+		// well that's odd. Better return false if something is wrong here
 		s.isServerProved = false
 		return false
 	}
