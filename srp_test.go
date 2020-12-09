@@ -194,7 +194,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 
 	server.SetOthersPublic(A)
 	if ret, err = server.calculateU(); err != nil {
-		t.Errorf("calculateu failed: %s", err)
+		t.Errorf("calculateU failed: %s", err)
 	}
 	if ret.Cmp(server.u) != 0 {
 		t.Error("u does not equal u (nobody tell Ayn Rand)")

@@ -23,7 +23,7 @@ func Example() {
 
 	/*** Part 1: First encounter. Enrollment ***/
 
-	// On first encounter between client and server, they will negotatiate
+	// On first encounter between client and server, they will negotiate
 	// an SRP group to use. We will assume that they have settled on
 	// RFC5054Group3072
 

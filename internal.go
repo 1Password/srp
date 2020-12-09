@@ -133,7 +133,7 @@ func (s *SRP) isUValid() bool {
 	return true
 }
 
-// makeVerifier creates to the verifier from x and paramebers
+// makeVerifier creates to the verifier from x and parameters
 func (s *SRP) makeVerifier() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
@@ -184,7 +184,7 @@ func (s *SRP) calculateU() (*big.Int, error) {
 func serverStyleHexFromBigInt(bn *big.Int) string {
 
 	// Don't worry. The compiler will build things the same even if we didn't create
-	// all of the intermediate variables below. And this better communicates all thes
+	// all of the intermediate variables below. And this better communicates all these
 	// things we are doing to construct these strings
 	b := bn.Bytes()
 	h := hex.EncodeToString(b)
