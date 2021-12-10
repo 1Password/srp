@@ -51,7 +51,6 @@ This still leaves some work outside of what the SRP object provides:
 2. The communication between client and server is not handled by this object.
 */
 type SRP struct {
-	group            *Group
 	ephemeralPrivate *big.Int // Little a or little b (ephemeral secrets)
 	ephemeralPublicA *big.Int // Public A
 	ephemeralPublicB *big.Int // Public A and B ephemeral values
@@ -59,12 +58,13 @@ type SRP struct {
 	u                *big.Int // calculated scrambling parameter
 	k                *big.Int // multiplier parameter
 	premasterKey     *big.Int // unhashed derived session secret
-	key              []byte   // H(preMasterSecret)
-	isServer         bool
-	badState         bool
-	isServerProved   bool   // whether server has proved knowledge of key
+	group            *Group
+	key              []byte // H(preMasterSecret)
 	m                []byte // M is server proof knowledge of key
 	cProof           []byte // Client proof of knowledge of key
+	isServerProved   bool   // whether server has proved knowledge of key
+	isServer         bool
+	badState         bool
 }
 
 // bigZero is a BigInt zero
