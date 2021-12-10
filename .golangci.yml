@@ -1,0 +1,28 @@
+linters:
+  enable-all: true
+  fast: false
+  disable:
+    # too noisy
+    - cyclop
+    - exhaustivestruct
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocritic
+    - godox
+    - goerr113
+    - gomnd
+    - gomoddirectives
+    - ifshort
+    - lll
+    - nlreturn
+    - paralleltest
+    - stylecheck
+    - testpackage
+    - varnamelen
+    - wsl
+    # deprecated
+    - golint
+    - interfacer
+    - maligned
+    - scopelint
