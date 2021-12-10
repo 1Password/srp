@@ -70,7 +70,8 @@ func init() {
 		g:            big.NewInt(2),
 		n:            g2048n,
 		Label:        "5054A2048",
-		ExponentSize: 27}
+		ExponentSize: 27,
+	}
 
 	g3072n := NumberFromString("0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1" +
 		"29024E088A67CC74020BBEA63B139B22514A08798E3404DD" +
@@ -92,7 +93,8 @@ func init() {
 		g:            big.NewInt(5),
 		n:            g3072n,
 		Label:        "5054A3072",
-		ExponentSize: 32}
+		ExponentSize: 32,
+	}
 
 	// RFC 3526 id 16
 	g4096n := NumberFromString("0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08" +
@@ -118,7 +120,8 @@ func init() {
 		g:            big.NewInt(5),
 		n:            g4096n,
 		Label:        "5054A4096",
-		ExponentSize: 38}
+		ExponentSize: 38,
+	}
 
 	// RFC 3526 group id 17
 	g6144n := NumberFromString("0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08" +
@@ -153,7 +156,8 @@ func init() {
 		g:            big.NewInt(5),
 		n:            g6144n,
 		Label:        "5054A6144",
-		ExponentSize: 43}
+		ExponentSize: 43,
+	}
 
 	// RFC 3526 group id 18
 	g8192n := NumberFromString("0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E08" +
@@ -197,14 +201,14 @@ func init() {
 		g:            big.NewInt(19),
 		n:            g8192n,
 		Label:        "5054A8192",
-		ExponentSize: 48}
+		ExponentSize: 48,
+	}
 
 	KnownGroups[RFC5054Group2048] = g2048
 	KnownGroups[RFC5054Group3072] = g3072
 	KnownGroups[RFC5054Group4096] = g4096
 	KnownGroups[RFC5054Group6144] = g6144
 	KnownGroups[RFC5054Group8192] = g8192
-	// DefaultGroup := g4096
 }
 
 /**

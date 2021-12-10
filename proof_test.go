@@ -14,7 +14,6 @@ import (
 var sampleSRP = new(SRP)
 
 func init() {
-
 	// We will need a minimal sample SRP object to play with, with a group, A, B, and key
 	// We don't need to actually compute the key, but we should use
 	// plausible values for these in our tests
@@ -33,11 +32,9 @@ func init() {
 	sampleSRP.ephemeralPublicB = B
 	sampleSRP.group = group
 	sampleSRP.key = key
-
 }
 
 func TestM(t *testing.T) {
-
 	salt, _ := hex.DecodeString("2e1a520e226f461e840e40e0")
 	username := "Polly@cracker.example"
 
@@ -55,7 +52,6 @@ func TestM(t *testing.T) {
 	if !client.GoodServerProof(salt, username, M) {
 		t.Errorf("client rejected server proof")
 	}
-
 }
 
 // These copy utilities should probably be moved elsewhere. And perhaps they are

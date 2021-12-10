@@ -11,9 +11,8 @@ import (
 	"github.com/1Password/srp"
 )
 
-// ExampleServerClientKey is an example
+// ExampleServerClientKey is an example.
 func Example() {
-
 	// This example has both a server and the corresponding client live
 	// in the same function. That is not something you would normally do.
 	// Normally, you would be running one side (client or server) only.
@@ -190,7 +189,6 @@ func Example() {
 	// If the message is successfully decrypted, then client and server
 	// can talk to each other using the key they derived
 	fmt.Printf("S -> C: %s\n", message)
-	// Output: Hi client! Will you be my Valentine?
 
 	// Client must generate a new nonce for all messages it sends.
 	// It MUST NOT reuse the nonce that was used in the message

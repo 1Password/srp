@@ -45,7 +45,7 @@ func checkGroup(group Group) error {
 }
 
 // These tests are very slow. Several seconds per group
-// Also they do not defend against maliciously crafted groups
+// Also they do not defend against maliciously crafted groups.
 func checkGroupSlow(group Group) error {
 	if !group.n.ProbablyPrime(2) {
 		return errors.New("N isn't prime")

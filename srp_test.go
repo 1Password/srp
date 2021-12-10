@@ -32,7 +32,7 @@ func init() {
 }
 
 func hexNumberString(s string) *big.Int {
-	result, err := hex.DecodeString(strings.Replace(s, " ", "", -1))
+	result, err := hex.DecodeString(strings.ReplaceAll(s, " ", ""))
 	if err != nil {
 		panic(err)
 	}
@@ -40,7 +40,7 @@ func hexNumberString(s string) *big.Int {
 	return n.SetBytes(result)
 }
 
-// Auth contains information on the type of auth used
+// Auth contains information on the type of auth used.
 type Auth struct {
 	Method     string `json:"method"`
 	Alg        string `json:"alg"`
@@ -101,7 +101,6 @@ func TestNewSRPClient(t *testing.T) {
 	if expectedV4096.Cmp(s.v) != 0 {
 		t.Errorf("v mismatch\n\tExpected:\t%s\n\tReceived:\t%s", expectedV4096, s.v)
 	}
-
 }
 
 func TestSRPVerifier1024(t *testing.T) {
@@ -117,12 +116,11 @@ func TestSRPVerifier1024(t *testing.T) {
 	if expectedVerifier.Cmp(clientV) != 0 {
 		t.Errorf("v mismatch\n\tExpected:\t%s\n\tReceived:\t%s", expectedVerifier, clientV)
 	}
-
 }
 
 // TestNewSRPAgainstSpec tests against Appendix B of rfc5054.
 // This test does not include the derivation of x, which is in
-// TestKDFRFC5054
+// TestKDFRFC5054.
 func TestNewSRPAgainstSpec(t *testing.T) {
 	// Given standard SRP test vectors from http://tools.ietf.org/html/rfc5054#appendix-B
 	groupID := RFC5054Group1024
@@ -243,7 +241,6 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	if u.Cmp(client.u) == 0 {
 		t.Error("A miracle: client u meets 5054 expected value")
 	}
-
 }
 
 func TestClientServerMatch(t *testing.T) {
@@ -310,7 +307,6 @@ func TestBadA(t *testing.T) {
 	if key != nil {
 		t.Error("key created after bad B")
 	}
-
 }
 
 func TestMaxInt(t *testing.T) {
@@ -351,7 +347,7 @@ func TestCalculateU(t *testing.T) {
 
 	// I probably should have saved the shell scripting that was involved in creating these tests
 	expected := map[string]map[string]string{
-		"0123456789ab": map[string]string{
+		"0123456789ab": {
 			"0123456789ab":     "3473b093f4dbc722b2888a959bbea9900930a37b551a87f0dacb5b8e7cc25716",
 			"123456789abd":     "90e6c973cdc0fd7e1e46c175a96b097aa028c609735c7b8e22cc2ad73d4f3562",
 			"00123456789abd":   "90e6c973cdc0fd7e1e46c175a96b097aa028c609735c7b8e22cc2ad73d4f3562",
@@ -359,7 +355,7 @@ func TestCalculateU(t *testing.T) {
 			"ffff12341234":     "a4e46ec489660092000f88f2f313630c198583f4609b1d731b4c12f8a13d1aae",
 			"123456789abcdef0": "d469afdb6b53eae515a3b90bd068f4b51a7c07ed3338a5b0f115568f189c92fa",
 		},
-		"123456789abd": map[string]string{
+		"123456789abd": {
 			"0123456789ab":     "8316d6bb7c4948281828fc87b0a60b27131147acc9dd3884579dd373bc5fa66c",
 			"123456789abd":     "84a9d2f215c13ed60a5163fc1ae80720c5ee38994cb3c9e2c61f1d9c6769fee0",
 			"00123456789abd":   "84a9d2f215c13ed60a5163fc1ae80720c5ee38994cb3c9e2c61f1d9c6769fee0",
@@ -367,7 +363,7 @@ func TestCalculateU(t *testing.T) {
 			"ffff12341234":     "dcd2d4db6b6b9374ece8218aa329f0d6af1916e3e7cd648ac69696f7b0fc35c8",
 			"123456789abcdef0": "f3b18867043bff3f8f70ded696a8f30641a6e978b64afac268fe5e0c218541b5",
 		},
-		"00123456789abd": map[string]string{
+		"00123456789abd": {
 			"0123456789ab":     "8316d6bb7c4948281828fc87b0a60b27131147acc9dd3884579dd373bc5fa66c",
 			"123456789abd":     "84a9d2f215c13ed60a5163fc1ae80720c5ee38994cb3c9e2c61f1d9c6769fee0",
 			"00123456789abd":   "84a9d2f215c13ed60a5163fc1ae80720c5ee38994cb3c9e2c61f1d9c6769fee0",
@@ -375,7 +371,7 @@ func TestCalculateU(t *testing.T) {
 			"ffff12341234":     "dcd2d4db6b6b9374ece8218aa329f0d6af1916e3e7cd648ac69696f7b0fc35c8",
 			"123456789abcdef0": "f3b18867043bff3f8f70ded696a8f30641a6e978b64afac268fe5e0c218541b5",
 		},
-		"0fff12341234": map[string]string{
+		"0fff12341234": {
 			"0123456789ab":     "a8b75aa42a37697190b7ee3d4a94767d824833b09a67f4a000baa91b4c299bbf",
 			"123456789abd":     "e3fe08e9dd54a7fc45cef7fce898cfe5d13761180d39ae2ce09d291de84e24f0",
 			"00123456789abd":   "e3fe08e9dd54a7fc45cef7fce898cfe5d13761180d39ae2ce09d291de84e24f0",
@@ -383,7 +379,7 @@ func TestCalculateU(t *testing.T) {
 			"ffff12341234":     "f4f5f8c6136abb8f330c584cc4118ff4ab267a778f647488132e8247918cea5a",
 			"123456789abcdef0": "35d468540b4ec5b6d87c892c64c53f12133d95e3f7725738fe6aec849084ad94",
 		},
-		"ffff12341234": map[string]string{
+		"ffff12341234": {
 			"0123456789ab":     "c64ccc47ad0384b7319e77454c8222360517a187c4a65e14681e896fe33df91c",
 			"123456789abd":     "206b4ac4d451dbba7de2f31f321c4cdf08562ba42ef39d447ac74ffa62b4991e",
 			"00123456789abd":   "206b4ac4d451dbba7de2f31f321c4cdf08562ba42ef39d447ac74ffa62b4991e",
@@ -391,7 +387,7 @@ func TestCalculateU(t *testing.T) {
 			"ffff12341234":     "a4f7aea26de01ca96c679539ae8a5f85c84885c8df7d22323dcc5225ab5bd782",
 			"123456789abcdef0": "20e882a091216d709c6e3e59dcac4068912c82b401412b6c89105e16cd10960a",
 		},
-		"123456789abcdef0": map[string]string{
+		"123456789abcdef0": {
 			"0123456789ab":     "d1ffad6424b8e424ab930f37c42523371e639ccd40d25c49683590878345c4c2",
 			"123456789abd":     "2765d1ed7b227492795f830e9606875dfc2bb79cb7d047de0d8f57c577bb840e",
 			"00123456789abd":   "2765d1ed7b227492795f830e9606875dfc2bb79cb7d047de0d8f57c577bb840e",
@@ -404,7 +400,6 @@ func TestCalculateU(t *testing.T) {
 	s := NewSRPServer(KnownGroups[RFC5054Group4096], v, k)
 	for _, A := range testStrings {
 		for _, B := range testStrings {
-
 			s.ephemeralPublicA = NumberFromString(A)
 			s.ephemeralPublicB = NumberFromString(B)
 
@@ -419,10 +414,8 @@ func TestCalculateU(t *testing.T) {
 			if uHex != expected[A][B] {
 				t.Errorf("u(%s,%s) = %s\n\tExpected %s", A, B, uHex, expected[A][B])
 			}
-
 		}
 	}
-
 }
 
 /**

@@ -67,9 +67,10 @@ type SRP struct {
 	badState         bool
 }
 
-// bigZero is a BigInt zero
-var bigZero = big.NewInt(0)
-var bigOne = big.NewInt(1)
+var (
+	bigZero = big.NewInt(0)
+	bigOne  = big.NewInt(1)
+)
 
 /*
 NewSRPClient sets up an SRP object for a client.
@@ -79,7 +80,7 @@ x is your long term secret and k is the set multiplier.
 Pass in a a nil k if you want it to be generated for you.
 Note that you need the same k on both server and client.
 */
-func NewSRPClient(group *Group, x *big.Int, k *big.Int) *SRP {
+func NewSRPClient(group *Group, x, k *big.Int) *SRP {
 	return newSRP(false, group, x, k)
 }
 
@@ -91,11 +92,11 @@ v is your long term secret and k is the set multiplier.
 Pass in a a nil k if you want it to be generated for you.
 Note that you need the same k on both server and client.
 */
-func NewSRPServer(group *Group, v *big.Int, k *big.Int) *SRP {
+func NewSRPServer(group *Group, v, k *big.Int) *SRP {
 	return newSRP(true, group, v, k)
 }
 
-func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
+func newSRP(serverSide bool, group *Group, xORv, k *big.Int) *SRP {
 	s := &SRP{
 		// Setting these to Int-zero gives me a useful way to test
 		// if these have been properly set later
@@ -137,12 +138,10 @@ func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 		if _, err := s.makeB(); err != nil {
 			return nil
 		}
-
 	} else {
 		if _, err := s.makeA(); err != nil {
 			return nil
 		}
-
 	}
 	return s
 }
@@ -181,7 +180,6 @@ This method is public in case the user wishes to check those values earlier than
 than using SetOthersPublic(), which also performs this check.
 */
 func (s *SRP) IsPublicValid(AorB *big.Int) bool {
-
 	result := big.Int{}
 	// There are three ways to fail.
 	// 1. If we aren't checking with respect to a valid group
@@ -280,7 +278,7 @@ func (s *SRP) Key() ([]byte, error) {
 	// Because of tests, we don't want to always recalculate u
 	if !s.isUValid() {
 		if u, err := s.calculateU(); u == nil || err != nil {
-			return nil, fmt.Errorf("failed to calculate u: %s", err)
+			return nil, fmt.Errorf("failed to calculate u: %w", err)
 		}
 	}
 	// We must refuse to calculate Key when u == 0
@@ -321,7 +319,7 @@ func (s *SRP) Key() ([]byte, error) {
 
 	h := sha256.New()
 	if _, err := h.Write([]byte(fmt.Sprintf("%x", s.premasterKey))); err != nil {
-		return nil, fmt.Errorf("failed to write premasterKey to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write premasterKey to hasher: %w", err)
 	}
 
 	s.key = h.Sum(nil)
