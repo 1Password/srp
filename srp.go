@@ -128,13 +128,21 @@ func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 		// should probably do some sanity checks on k here
 		s.k.Set(k)
 	} else {
-		s.makeLittleK()
+		if _, err := s.makeLittleK(); err != nil {
+			return nil
+		}
 	}
 	s.generateMySecret()
 	if s.isServer {
-		s.makeB()
+		if _, err := s.makeB(); err != nil {
+			return nil
+		}
+
 	} else {
-		s.makeA()
+		if _, err := s.makeA(); err != nil {
+			return nil
+		}
+
 	}
 	return s
 }
@@ -150,12 +158,16 @@ The caller just needs to send EphemeralPublic() to the other party.
 func (s *SRP) EphemeralPublic() *big.Int {
 	if s.isServer {
 		if s.ephemeralPublicB.Cmp(bigZero) == 0 {
-			s.makeB()
+			if _, err := s.makeB(); err != nil {
+				return nil
+			}
 		}
 		return s.ephemeralPublicB
 	}
 	if s.ephemeralPublicA.Cmp(bigZero) == 0 {
-		s.makeA()
+		if _, err := s.makeA(); err != nil {
+			return nil
+		}
 	}
 	return s.ephemeralPublicA
 }
