@@ -59,8 +59,12 @@ func TestCalculateClientRawKey(t *testing.T) {
 	groupID := RFC5054Group4096
 	client := NewSRPClient(KnownGroups[groupID], x, k)
 	client.ephemeralPrivate = a
-	client.makeA()
-	client.SetOthersPublic(B)
+	if _, err := client.makeA(); err != nil {
+		t.Error(err)
+	}
+	if err := client.SetOthersPublic(B); err != nil {
+		t.Error(err)
+	}
 	client.u = u
 	key, _ := client.Key()
 
@@ -183,7 +187,9 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		t.Error("B is incorrect")
 	}
 
-	server.SetOthersPublic(A)
+	if err := server.SetOthersPublic(A); err != nil {
+		t.Error(err)
+	}
 	if ret, err = server.calculateU(); err != nil {
 		t.Errorf("calculateU failed: %s", err)
 	}
@@ -246,7 +252,9 @@ func TestClientServerMatch(t *testing.T) {
 	groupID := RFC5054Group2048
 
 	xbytes := make([]byte, 32)
-	rand.Read(xbytes)
+	if _, err := rand.Read(xbytes); err != nil {
+		t.Error(err)
+	}
 	x := &big.Int{}
 	x.SetBytes(xbytes)
 
@@ -260,8 +268,12 @@ func TestClientServerMatch(t *testing.T) {
 
 	A := client.EphemeralPublic()
 	B := server.EphemeralPublic()
-	server.SetOthersPublic(A)
-	client.SetOthersPublic(B)
+	if err := server.SetOthersPublic(A); err != nil {
+		t.Error(err)
+	}
+	if err := client.SetOthersPublic(B); err != nil {
+		t.Error(err)
+	}
 
 	serverKey, _ := server.Key()
 	clientKey, _ := client.Key()
@@ -279,7 +291,9 @@ func TestClientServerMatch(t *testing.T) {
 
 func TestBadA(t *testing.T) {
 	xbytes := make([]byte, 32)
-	rand.Read(xbytes)
+	if _, err := rand.Read(xbytes); err != nil {
+		t.Error(err)
+	}
 	v := &big.Int{}
 	v.SetBytes(xbytes)
 
