@@ -15,7 +15,7 @@ import (
  */
 
 /*
-KDFRFC5054 is *not* recommended. Instead use a key derivation function (KDF) that
+KDFRFC5054 is *NOT* recommended. Instead use a key derivation function (KDF) that
 involves a hashing scheme designed for password hashing.
 The SRP verifier that is stored by the server is like
 a password hash with respect to crackability. Choose a KDF
@@ -48,7 +48,7 @@ func KDFRFC5054(salt []byte, username string, password string) (x *big.Int) {
 }
 
 // PreparePassword strips leading and trailing white space
-// and normalizes to unicode NFKD
+// and normalizes to unicode NFKD.
 func PreparePassword(s string) string {
 	var out string
 	out = string(norm.NFKD.Bytes([]byte(s)))
