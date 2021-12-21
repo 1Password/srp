@@ -12,7 +12,7 @@ outside of such a testing context
 // TestOnlyResetKey sets to final key back to nil. This is used only for testing
 // integration with caller
 //
-// Deprecated: This is only used for testing integration with caller. Never if real life
+// Deprecated: This is only used for testing integration with caller. Never if real life.
 func (s *SRP) TestOnlyResetKey() {
 	s.key = nil
 }

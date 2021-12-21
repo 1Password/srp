@@ -42,22 +42,22 @@ func (s *SRP) M(salt []byte, uname string) ([]byte, error) {
 	h := sha256.New()
 
 	if _, err := h.Write(groupHash[:]); err != nil {
-		return nil, fmt.Errorf("failed to write group hash to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write group hash to hasher: %w", err)
 	}
 	if _, err := h.Write(uHash[:]); err != nil {
-		return nil, fmt.Errorf("failed to write u hash to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write u hash to hasher: %w", err)
 	}
 	if _, err := h.Write(salt); err != nil {
-		return nil, fmt.Errorf("failed to write salt to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write salt to hasher: %w", err)
 	}
 	if _, err := h.Write(s.ephemeralPublicA.Bytes()); err != nil {
-		return nil, fmt.Errorf("failed to write A to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write A to hasher: %w", err)
 	}
 	if _, err := h.Write(s.ephemeralPublicB.Bytes()); err != nil {
-		return nil, fmt.Errorf("failed to write B to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write B to hasher: %w", err)
 	}
 	if _, err := h.Write(s.key); err != nil {
-		return nil, fmt.Errorf("failed to write key to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write key to hasher: %w", err)
 	}
 
 	s.m = h.Sum(nil)
@@ -92,15 +92,15 @@ func (s *SRP) ClientProof() ([]byte, error) {
 	h := sha256.New()
 	_, err := h.Write(s.ephemeralPublicA.Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("failed to write A to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write A to hasher: %w", err)
 	}
 	_, err = h.Write(s.m)
 	if err != nil {
-		return nil, fmt.Errorf("failed to write M to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write M to hasher: %w", err)
 	}
 	_, err = h.Write(s.key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to write key to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write key to hasher: %w", err)
 	}
 	s.cProof = h.Sum(nil)
 	return s.cProof, nil

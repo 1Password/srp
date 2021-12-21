@@ -1,7 +1,9 @@
 package srp
 
 import (
-	"crypto/sha1" // #nosec See docs for KDFRFC5054 for warnings.
+
+	// #nosec See docs for KDFRFC5054 for warnings.
+	"crypto/sha1"
 	"math/big"
 	"strings"
 	"unicode"
@@ -27,20 +29,30 @@ in RFC 5054 §2.6, which says
     x = SHA1(s | SHA1(I | ":" | P))
 */
 func KDFRFC5054(salt []byte, username string, password string) (x *big.Int) {
-
 	p := []byte(PreparePassword(password))
 
 	u := []byte(PreparePassword(username))
 
 	innerHasher := sha1.New() // #nosec
-	innerHasher.Write(u)
-	innerHasher.Write([]byte(":"))
-	innerHasher.Write(p)
+	if _, err := innerHasher.Write(u); err != nil {
+		panic(err)
+	}
+	if _, err := innerHasher.Write([]byte(":")); err != nil {
+		panic(err)
+	}
+	if _, err := innerHasher.Write(p); err != nil {
+		panic(err)
+	}
+
 	ih := innerHasher.Sum(nil)
 
 	oHasher := sha1.New() // #nosec
-	oHasher.Write(salt)
-	oHasher.Write(ih)
+	if _, err := oHasher.Write(salt); err != nil {
+		panic(err)
+	}
+	if _, err := oHasher.Write(ih); err != nil {
+		panic(err)
+	}
 
 	h := oHasher.Sum(nil)
 	x = bigIntFromBytes(h)

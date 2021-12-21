@@ -23,7 +23,6 @@ methods in here.
 // on the group. We go with RFC 3526 values if available, otherwise
 // a minimum of 32 bytes.
 func (s *SRP) generateMySecret() *big.Int {
-
 	eSize := maxInt(s.group.ExponentSize, MinExponentSize)
 	bytes := make([]byte, eSize)
 	_, err := rand.Read(bytes)
@@ -39,7 +38,7 @@ func (s *SRP) generateMySecret() *big.Int {
 
 // makeLittleK initializes multiplier based on group parameters
 // k = H(N, g)
-// BUG(jpg): Creation of multiplier, little k, does _not_ conform to RFC 5054 padding
+// BUG(jpg): Creation of multiplier, little k, does _not_ conform to RFC 5054 padding.
 func (s *SRP) makeLittleK() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
@@ -50,18 +49,19 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 	h := sha256.New()
 	_, err := h.Write(s.group.n.Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("failed to write N to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write N to hasher: %w", err)
 	}
 	_, err = h.Write(s.group.g.Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("failed to write g to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write g to hasher: %w", err)
 	}
 	k := &big.Int{}
 	s.k = k.SetBytes(h.Sum(nil))
+
 	return s.k, nil
 }
 
-// makeA calculates A (if necessary) and returns it
+// makeA calculates A (if necessary) and returns it.
 func (s *SRP) makeA() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
@@ -78,9 +78,8 @@ func (s *SRP) makeA() (*big.Int, error) {
 	return result, nil
 }
 
-// makeB calculates B and returns it
+// makeB calculates B and returns it.
 func (s *SRP) makeB() (*big.Int, error) {
-
 	term1 := &big.Int{}
 	term2 := &big.Int{}
 
@@ -132,7 +131,7 @@ func (s *SRP) isUValid() bool {
 	return true
 }
 
-// makeVerifier creates to the verifier from x and parameters
+// makeVerifier creates to the verifier from x and parameters.
 func (s *SRP) makeVerifier() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
@@ -153,7 +152,7 @@ func (s *SRP) makeVerifier() (*big.Int, error) {
 // BUG(jpg): Calculation of u does not use RFC 5054 compatable padding/hashing
 // The scheme we use (see source) is to use SHA256 of the concatenation of A and B
 // each represented as a lowercase hexadecimal string.
-// Additionally those hex strings have leading "0" removed even if that makes them of odd length
+// Additionally those hex strings have leading "0" removed even if that makes them of odd length.
 func (s *SRP) calculateU() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		s.u = nil
@@ -167,7 +166,7 @@ func (s *SRP) calculateU() (*big.Int, error) {
 
 	_, err := h.Write([]byte(fmt.Sprintf("%s%s", trimmedHexPublicA, trimmedHexPublicB)))
 	if err != nil {
-		return nil, fmt.Errorf("failed to write to hasher: %v", err)
+		return nil, fmt.Errorf("failed to write to hasher: %w", err)
 	}
 
 	u := &big.Int{}
@@ -179,9 +178,8 @@ func (s *SRP) calculateU() (*big.Int, error) {
 }
 
 // Convert a bigInt to a lowercase hex string with leading "0"s removed.
-// We do this explicitly instead of as an artifact of fmt.Sprintf
+// We do this explicitly instead of as an artifact of fmt.Sprintf.
 func serverStyleHexFromBigInt(bn *big.Int) string {
-
 	// Don't worry. The compiler will build things the same even if we didn't create
 	// all of the intermediate variables below. And this better communicates all these
 	// things we are doing to construct these strings
