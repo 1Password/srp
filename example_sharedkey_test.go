@@ -47,7 +47,10 @@ func Example() {
 	username := "fred@fred.example"
 
 	// You would use a better Key Derivation Function than this one
-	x := srp.KDFRFC5054(salt, username, pw) // Really. Don't use this KDF
+	x, err := srp.KDFRFC5054(salt, username, pw) // Really. Don't use this KDF
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// this is still our first use scenario, but the client needs to create
 	// an SRP client to generate the verifier.
