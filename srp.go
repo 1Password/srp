@@ -80,7 +80,7 @@ x is your long term secret and k is the set multiplier.
 Pass in a a nil k if you want it to be generated for you.
 Note that you need the same k on both server and client.
 */
-func NewSRPClient(group *Group, x, k *big.Int) *SRP {
+func NewSRPClient(group *Group, x, k *big.Int) (*SRP, error) {
 	return newSRP(false, group, x, k)
 }
 
@@ -92,11 +92,11 @@ v is your long term secret and k is the set multiplier.
 Pass in a a nil k if you want it to be generated for you.
 Note that you need the same k on both server and client.
 */
-func NewSRPServer(group *Group, v, k *big.Int) *SRP {
+func NewSRPServer(group *Group, v, k *big.Int) (*SRP, error) {
 	return newSRP(true, group, v, k)
 }
 
-func newSRP(serverSide bool, group *Group, xORv, k *big.Int) *SRP {
+func newSRP(serverSide bool, group *Group, xORv, k *big.Int) (*SRP, error) {
 	s := &SRP{
 		// Setting these to Int-zero gives me a useful way to test
 		// if these have been properly set later
@@ -130,20 +130,23 @@ func newSRP(serverSide bool, group *Group, xORv, k *big.Int) *SRP {
 		s.k.Set(k)
 	} else {
 		if _, err := s.makeLittleK(); err != nil {
-			return nil
+			return nil, fmt.Errorf("generating little k: %w", err)
 		}
 	}
-	s.generateMySecret()
+	_, err := s.generateMySecret()
+	if err != nil {
+		return nil, fmt.Errorf("generating secret: %w", err)
+	}
 	if s.isServer {
 		if _, err := s.makeB(); err != nil {
-			return nil
+			return nil, fmt.Errorf("generating B: %w", err)
 		}
 	} else {
 		if _, err := s.makeA(); err != nil {
-			return nil
+			return nil, fmt.Errorf("generating A: %w", err)
 		}
 	}
-	return s
+	return s, nil
 }
 
 /*

@@ -57,7 +57,11 @@ func TestCalculateClientRawKey(t *testing.T) {
 	expectedKey, _ := hex.DecodeString("f6bef3d6fa5a08a849bf61041cd5b3185c16aede851c819a3644fa7e918c4da6")
 
 	groupID := RFC5054Group4096
-	client := NewSRPClient(KnownGroups[groupID], x, k)
+	client, err := NewSRPClient(KnownGroups[groupID], x, k)
+	if err != nil {
+		t.Fatalf("setting up client: %v", err)
+	}
+
 	client.ephemeralPrivate = a
 	if _, err := client.makeA(); err != nil {
 		t.Error(err)
@@ -74,9 +78,11 @@ func TestCalculateClientRawKey(t *testing.T) {
 }
 
 func TestNewSRPClient(t *testing.T) {
-	var err error
 	x := NumberFromString("740299d2306764ad9e87f37cd54179e388fd45c85fea3b030eb425d7adcb2773")
-	s := NewSRPClient(KnownGroups[RFC5054Group4096], x, nil)
+	s, err := NewSRPClient(KnownGroups[RFC5054Group4096], x, nil)
+	if err != nil {
+		t.Fatalf("setting up client: %v", err)
+	}
 
 	expectedV4096 := NumberFromString("d05240ed513a4f267608e64cf2a84f5106741ddbf1435707a84f530207409d7" +
 		"af1e671182f9d77855b61c628df2b8f6ba8e9b6068fbc84fab80b4542f44c666e17358ebffa8d6fb00fd7037a" +
@@ -104,10 +110,13 @@ func TestNewSRPClient(t *testing.T) {
 }
 
 func TestSRPVerifier1024(t *testing.T) {
-	var err error
 	var clientV *big.Int
 	x := expectedX
-	s := NewSRPClient(KnownGroups[RFC5054Group1024], x, nil)
+
+	s, err := NewSRPClient(KnownGroups[RFC5054Group1024], x, nil)
+	if err != nil {
+		t.Fatalf("setting up client: %v", err)
+	}
 
 	if clientV, err = s.Verifier(); err != nil {
 		t.Errorf("couldn't make v: %s", err)
@@ -159,9 +168,11 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		"3499B200 210DCC1F 10EB3394 3CD67FC8 8A2F39A4 BE5BEC4E C0A3212D" +
 		"C346D7E4 74B29EDE 8A469FFE CA686E5A")
 
-	server := NewSRPServer(KnownGroups[groupID], v, k)
+	server, err := NewSRPServer(KnownGroups[groupID], v, k)
+	if err != nil {
+		t.Fatalf("setting up server: %v", err)
+	}
 
-	var err error
 	var ret *big.Int
 	var retBytes []byte
 
@@ -212,7 +223,10 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 
 	// Now lets compute the key from the client side
 
-	client := NewSRPClient(KnownGroups[groupID], x, k)
+	client, err := NewSRPClient(KnownGroups[groupID], x, k)
+	if err != nil {
+		t.Fatalf("setting up client: %v", err)
+	}
 
 	// Force use of test vector a
 	client.ephemeralPrivate = a
@@ -255,13 +269,19 @@ func TestClientServerMatch(t *testing.T) {
 	x := &big.Int{}
 	x.SetBytes(xbytes)
 
-	client := NewSRPClient(KnownGroups[groupID], x, nil)
+	client, err := NewSRPClient(KnownGroups[groupID], x, nil)
+	if err != nil {
+		t.Fatalf("setting up client: %v", err)
+	}
 
 	if v, err = client.Verifier(); err != nil {
 		t.Errorf("verifier creation failed: %s", err)
 	}
 
-	server := NewSRPServer(KnownGroups[groupID], v, nil)
+	server, err := NewSRPServer(KnownGroups[groupID], v, nil)
+	if err != nil {
+		t.Fatalf("setting up server: %v", err)
+	}
 
 	A := client.EphemeralPublic()
 	B := server.EphemeralPublic()
@@ -294,7 +314,10 @@ func TestBadA(t *testing.T) {
 	v := &big.Int{}
 	v.SetBytes(xbytes)
 
-	server := NewSRPServer(KnownGroups[RFC5054Group2048], v, nil)
+	server, err := NewSRPServer(KnownGroups[RFC5054Group2048], v, nil)
+	if err != nil {
+		t.Fatalf("setting up server: %v", err)
+	}
 
 	if err := server.SetOthersPublic(server.group.n); err == nil {
 		t.Error("a bad A was accepted")
@@ -397,7 +420,11 @@ func TestCalculateU(t *testing.T) {
 		},
 	}
 
-	s := NewSRPServer(KnownGroups[RFC5054Group4096], v, k)
+	s, err := NewSRPServer(KnownGroups[RFC5054Group4096], v, k)
+	if err != nil {
+		t.Fatalf("setting up server: %v", err)
+	}
+
 	for _, A := range testStrings {
 		for _, B := range testStrings {
 			s.ephemeralPublicA = NumberFromString(A)

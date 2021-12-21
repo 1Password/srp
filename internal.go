@@ -22,18 +22,21 @@ methods in here.
 // According to RFC 3526 §8 there are some specific sizes depending
 // on the group. We go with RFC 3526 values if available, otherwise
 // a minimum of 32 bytes.
-func (s *SRP) generateMySecret() *big.Int {
+func (s *SRP) generateMySecret() (*big.Int, error) {
 	eSize := maxInt(s.group.ExponentSize, MinExponentSize)
 	bytes := make([]byte, eSize)
-	_, err := rand.Read(bytes)
+	n, err := rand.Read(bytes)
 	if err != nil {
 		// If we can't get random bytes from the system, then we have no business doing anything crypto related.
-		panic(fmt.Sprintf("Failed to get random bytes: %v", err))
+		return nil, fmt.Errorf("Failed to get random bytes: %w", err)
+	} else if n != len(bytes) {
+		return nil, fmt.Errorf("could only read %d out of the %d random bytes", n, len(bytes))
 	}
+
 	ephemeralPrivate := &big.Int{}
 	ephemeralPrivate.SetBytes(bytes)
 	s.ephemeralPrivate = ephemeralPrivate
-	return s.ephemeralPrivate
+	return s.ephemeralPrivate, nil
 }
 
 // makeLittleK initializes multiplier based on group parameters
@@ -70,7 +73,11 @@ func (s *SRP) makeA() (*big.Int, error) {
 		return nil, fmt.Errorf("only the client can make A")
 	}
 	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
-		s.ephemeralPrivate = s.generateMySecret()
+		priv, err := s.generateMySecret()
+		if err != nil {
+			return nil, err
+		}
+		s.ephemeralPrivate = priv
 	}
 
 	s.ephemeralPublicA = &big.Int{}
@@ -106,7 +113,11 @@ func (s *SRP) makeB() (*big.Int, error) {
 		}
 	}
 	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
-		s.ephemeralPrivate = s.generateMySecret()
+		priv, err := s.generateMySecret()
+		if err != nil {
+			return nil, err
+		}
+		s.ephemeralPrivate = priv
 	}
 
 	// B = kv + g^b  (term1 is kv, term2 is g^b)
