@@ -1,4 +1,4 @@
-package srp
+package srp_test
 
 import (
 	"crypto/aes"
@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+
+	"github.com/1Password/srp"
 )
 
 // ExampleServerClientKey is an example
@@ -27,7 +29,7 @@ func Example() {
 	// an SRP group to use. We will assume that they have settled on
 	// RFC5054Group3072
 
-	group := RFC5054Group3072
+	group := srp.RFC5054Group3072
 
 	// The client will need a password from the user and will also need
 	// a salt.
@@ -37,22 +39,26 @@ func Example() {
 	// Generate 8 bytes of random salt. Be sure to use crypto/rand for all
 	// of your random number needs
 	salt := make([]byte, 8)
-	rand.Read(salt)
+	if n, err := rand.Read(salt); err != nil {
+		log.Fatal(err)
+	} else if n != 8 {
+		log.Fatal("failed to generate 8 byte salt")
+	}
 
 	username := "fred@fred.example"
 
 	// You would use a better Key Derivation Function than this one
-	x := KDFRFC5054(salt, username, pw) // Really. Don't use this KDF
+	x := srp.KDFRFC5054(salt, username, pw) // Really. Don't use this KDF
 
 	// this is still our first use scenario, but the client needs to create
 	// an SRP client to generate the verifier.
-	firstClient := NewSRPClient(KnownGroups[group], x, nil)
+	firstClient := srp.NewSRPClient(srp.KnownGroups[group], x, nil)
 	if firstClient == nil {
-		fmt.Println("couldn't setup client")
+		log.Fatal("couldn't setup client")
 	}
 	v, err := firstClient.Verifier()
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 
 	// Now the client has all it needs to enroll with the server.
@@ -69,16 +75,16 @@ func Example() {
 	// But here we will assume that that the client knows this, and already has
 	// computed x.
 
-	client := NewSRPClient(KnownGroups[group], x, nil)
+	client := srp.NewSRPClient(srp.KnownGroups[group], x, nil)
 
 	// The client will need to send its ephemeral public key to the server
 	// so we fetch that now.
 	A = client.EphemeralPublic()
 
 	// Now it is time for some stuff (though not much) on the server.
-	server := NewSRPServer(KnownGroups[group], v, nil)
+	server := srp.NewSRPServer(srp.KnownGroups[group], v, nil)
 	if server == nil {
-		fmt.Println("Couldn't set up server")
+		log.Fatal("Couldn't set up server")
 	}
 
 	// The server will get A (clients ephemeral public key) from the client
@@ -87,34 +93,32 @@ func Example() {
 	// Server MUST check error status here as defense against
 	// a malicious A sent by client.
 	if err = server.SetOthersPublic(A); err != nil {
-		fmt.Println(err)
 		log.Fatal(err)
 	}
 
 	// server sends its ephemeral public key, B, to client
 	// client sets it as others public key.
 	if B = server.EphemeralPublic(); B == nil {
-		fmt.Println("server couldn't make B")
+		log.Fatal("server couldn't make B")
 	}
 
 	// server can now make the key.
 	serverKey, err := server.Key()
 	if err != nil || serverKey == nil {
-		fmt.Printf("something went wrong making server key: %s\n", err)
+		log.Fatalf("something went wrong making server key: %s\n", err)
 	}
 
 	// Once the client receives B from the server it can set it.
 	// Client should check error status here as defense against
 	// a malicious B sent from server
 	if err = client.SetOthersPublic(B); err != nil {
-		fmt.Println(err)
 		log.Fatal(err)
 	}
 
 	// client can now make the session key
 	clientKey, err := client.Key()
 	if err != nil || clientKey == nil {
-		fmt.Printf("something went wrong making server key: %s", err)
+		log.Fatalf("something went wrong making server key: %s", err)
 	}
 
 	/*** Part 3: Server and client prove they have the same key ***/
@@ -123,29 +127,24 @@ func Example() {
 
 	serverProof, err := server.M(salt, username)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 
 	// client tests tests that the server sent a good proof
 	if !client.GoodServerProof(salt, username, serverProof) {
-		err = fmt.Errorf("bad proof from server")
-		fmt.Println(err)
 		// Client must bail and not send a its own proof back to the server
-		log.Fatal(err)
+		log.Fatal("bad proof from server")
 	}
 
 	// Only after having a valid server proof will the client construct its own
 	clientProof, err := client.ClientProof()
 	if err != nil {
-		fmt.Println(err)
 		log.Fatal(err)
 	}
 
 	// client sends its proof to the server. Server checks
 	if !server.GoodClientProof(clientProof) {
-		err = fmt.Errorf("bad proof from client")
-		fmt.Println(err)
-		log.Fatal(err)
+		log.Fatal("bad proof from client")
 	}
 
 	/*** Part 4: Server and Client exchange secret messages ***/
@@ -168,7 +167,11 @@ func Example() {
 	// We will use GCM with a 12 byte nonce for this example
 	// NEVER use the same nonce twice with the same key. Never.
 	nonce := make([]byte, 12)
-	rand.Read(nonce)
+	if n, err := rand.Read(nonce); err != nil {
+		log.Fatal(err)
+	} else if n != 12 {
+		log.Fatal("failed to generate 12 byte nonce")
+	}
 
 	plaintext := []byte("Hi client! Will you be my Valentine?")
 	ciphertext := serverCryptor.Seal(nil, nonce, plaintext, nil)
@@ -180,9 +183,8 @@ func Example() {
 
 	message, err := clientCryptor.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		fmt.Printf("Decryption failed: %s", err)
-		log.Fatal(err)
 		// if decryption fails, do not trust anything about ciphertext
+		log.Fatalf("Decryption failed: %s", err)
 	}
 
 	// If the message is successfully decrypted, then client and server
@@ -194,7 +196,13 @@ func Example() {
 	// It MUST NOT reuse the nonce that was used in the message
 	// it received when encrypting a different message.
 
-	rand.Read(nonce) // get a fresh nonce
+	// get a fresh nonce
+	if n, err := rand.Read(nonce); err != nil {
+		log.Fatal(err)
+	} else if n != 12 {
+		log.Fatal("failed to generate 12 byte nonce")
+	}
+
 	reply := []byte("Send me chocolate, not bits!")
 
 	replyCipherText := clientCryptor.Seal(nil, nonce, reply, nil)
@@ -204,8 +212,7 @@ func Example() {
 
 	plainReply, err := serverCryptor.Open(nil, nonce, replyCipherText, nil)
 	if err != nil {
-		fmt.Printf("Decryption failed: %s", err)
-		log.Fatal(err)
+		log.Fatalf("Decryption failed: %s", err)
 	}
 	fmt.Printf("C -> S: %s\n", plainReply)
 	// Output: S -> C: Hi client! Will you be my Valentine?

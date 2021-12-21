@@ -21,8 +21,6 @@ var expectedVerifier = hexNumberString(
 		"EA53D15C 1AFF87B2 B9DA6E04 E058AD51 CC72BFC9 033B564E 26480D78" +
 		"E955A5E2 9E7AB245 DB2BE315 E2099AFB")
 
-var a = hexNumberString("60975527 035CF2AD 1989806F 0407210B C81EDC04 E2762A56 AFD529DD DA2D4393")
-
 var g1024 = &Group{g: big.NewInt(2), n: NumberFromString("0x EEAF0AB9ADB38DD69C33F80AFA8FC5E86072618775FF3C0B9EA2314C" +
 	"9C256576D674DF7496EA81D3383B4813D692C6E0E0D5D8E250B98BE4" +
 	"8E495C1D6089DAD15DC7D7B46154D6B6CE8EF4AD69B15D4982559B29" +
@@ -32,13 +30,6 @@ var g1024 = &Group{g: big.NewInt(2), n: NumberFromString("0x EEAF0AB9ADB38DD69C3
 func init() {
 	KnownGroups[RFC5054Group1024] = g1024
 }
-
-var expectedA = hexNumberString(
-	"61D5E490 F6F1B795 47B0704C 436F523D D0E560F0 C64115BB 72557EC4" +
-		"4352E890 3211C046 92272D8B 2D1A5358 A2CF1B6E 0BFCF99F 921530EC" +
-		"8E393561 79EAE45E 42BA92AE ACED8251 71E1E8B9 AF6D9C03 E1327F44" +
-		"BE087EF0 6530E69F 66615261 EEF54073 CA11CF58 58F0EDFD FE15EFEA" +
-		"B349EF5D 76988A36 72FAC47B 0769447B")
 
 func hexNumberString(s string) *big.Int {
 	result, err := hex.DecodeString(strings.Replace(s, " ", "", -1))
@@ -68,8 +59,12 @@ func TestCalculateClientRawKey(t *testing.T) {
 	groupID := RFC5054Group4096
 	client := NewSRPClient(KnownGroups[groupID], x, k)
 	client.ephemeralPrivate = a
-	client.makeA()
-	client.SetOthersPublic(B)
+	if _, err := client.makeA(); err != nil {
+		t.Error(err)
+	}
+	if err := client.SetOthersPublic(B); err != nil {
+		t.Error(err)
+	}
 	client.u = u
 	key, _ := client.Key()
 
@@ -192,7 +187,9 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 		t.Error("B is incorrect")
 	}
 
-	server.SetOthersPublic(A)
+	if err := server.SetOthersPublic(A); err != nil {
+		t.Error(err)
+	}
 	if ret, err = server.calculateU(); err != nil {
 		t.Errorf("calculateU failed: %s", err)
 	}
@@ -255,7 +252,9 @@ func TestClientServerMatch(t *testing.T) {
 	groupID := RFC5054Group2048
 
 	xbytes := make([]byte, 32)
-	rand.Read(xbytes)
+	if _, err := rand.Read(xbytes); err != nil {
+		t.Error(err)
+	}
 	x := &big.Int{}
 	x.SetBytes(xbytes)
 
@@ -269,8 +268,12 @@ func TestClientServerMatch(t *testing.T) {
 
 	A := client.EphemeralPublic()
 	B := server.EphemeralPublic()
-	server.SetOthersPublic(A)
-	client.SetOthersPublic(B)
+	if err := server.SetOthersPublic(A); err != nil {
+		t.Error(err)
+	}
+	if err := client.SetOthersPublic(B); err != nil {
+		t.Error(err)
+	}
 
 	serverKey, _ := server.Key()
 	clientKey, _ := client.Key()
@@ -288,7 +291,9 @@ func TestClientServerMatch(t *testing.T) {
 
 func TestBadA(t *testing.T) {
 	xbytes := make([]byte, 32)
-	rand.Read(xbytes)
+	if _, err := rand.Read(xbytes); err != nil {
+		t.Error(err)
+	}
 	v := &big.Int{}
 	v.SetBytes(xbytes)
 

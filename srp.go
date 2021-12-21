@@ -51,7 +51,6 @@ This still leaves some work outside of what the SRP object provides:
 2. The communication between client and server is not handled by this object.
 */
 type SRP struct {
-	group            *Group
 	ephemeralPrivate *big.Int // Little a or little b (ephemeral secrets)
 	ephemeralPublicA *big.Int // Public A
 	ephemeralPublicB *big.Int // Public A and B ephemeral values
@@ -59,12 +58,13 @@ type SRP struct {
 	u                *big.Int // calculated scrambling parameter
 	k                *big.Int // multiplier parameter
 	premasterKey     *big.Int // unhashed derived session secret
-	key              []byte   // H(preMasterSecret)
-	isServer         bool
-	badState         bool
-	isServerProved   bool   // whether server has proved knowledge of key
+	group            *Group
+	key              []byte // H(preMasterSecret)
 	m                []byte // M is server proof knowledge of key
 	cProof           []byte // Client proof of knowledge of key
+	isServerProved   bool   // whether server has proved knowledge of key
+	isServer         bool
+	badState         bool
 }
 
 // bigZero is a BigInt zero
@@ -74,13 +74,10 @@ var bigOne = big.NewInt(1)
 /*
 NewSRPClient sets up an SRP object for a client.
 
-group *Group: Pointer to the Diffie-Hellman group to be used.
-
-x *big.Int: Your long term secret, x.
-
-k *big.Int: If you wish to manually set the multiplier, little k, pass in
-a non-nil bigInt. If you set this to nil, then we will generate one for you.
-You need the same k on both server and client.
+Recall that group is the De-Hellman group to be used,
+x is your long term secret and k is the set multiplier.
+Pass in a a nil k if you want it to be generated for you.
+Note that you need the same k on both server and client.
 */
 func NewSRPClient(group *Group, x *big.Int, k *big.Int) *SRP {
 	return newSRP(false, group, x, k)
@@ -89,13 +86,10 @@ func NewSRPClient(group *Group, x *big.Int, k *big.Int) *SRP {
 /*
 NewSRPServer sets up an SRP object for a server.
 
-group *Group: Pointer to the Diffie-Hellman group to be used.
-
-v *big.Int: Your long term secret, v.
-
-k *big.Int: If you wish to manually set the multiplier, little k, pass in
-a non-nil bigInt. If you set this to nil, then we will generate one for you.
-You need the same k on both server and client.
+Recall that group is the De-Hellman group to be used,
+v is your long term secret and k is the set multiplier.
+Pass in a a nil k if you want it to be generated for you.
+Note that you need the same k on both server and client.
 */
 func NewSRPServer(group *Group, v *big.Int, k *big.Int) *SRP {
 	return newSRP(true, group, v, k)
@@ -134,40 +128,58 @@ func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 		// should probably do some sanity checks on k here
 		s.k.Set(k)
 	} else {
-		s.makeLittleK()
+		if _, err := s.makeLittleK(); err != nil {
+			return nil
+		}
 	}
 	s.generateMySecret()
 	if s.isServer {
-		s.makeB()
+		if _, err := s.makeB(); err != nil {
+			return nil
+		}
+
 	} else {
-		s.makeA()
+		if _, err := s.makeA(); err != nil {
+			return nil
+		}
+
 	}
 	return s
 }
 
-// EphemeralPublic returns A on client or B on server
-// If you are a client, you will need to send A to the server.
-// If you are a server, you will need to send B to the client.
-// But this abstracts away from user needing to keep A and B straight. Caller
-// just needs to send EphemeralPublic() to the other party.
+/*
+EphemeralPublic returns A on client or B on server.
+
+If you are a client, you will need to send A to the server.
+If you are a server, you will need to send B to the client.
+This abstracts away from the user the need to keep track of which one is A and B.
+The caller just needs to send EphemeralPublic() to the other party.
+*/
 func (s *SRP) EphemeralPublic() *big.Int {
 	if s.isServer {
 		if s.ephemeralPublicB.Cmp(bigZero) == 0 {
-			s.makeB()
+			if _, err := s.makeB(); err != nil {
+				return nil
+			}
 		}
 		return s.ephemeralPublicB
 	}
 	if s.ephemeralPublicA.Cmp(bigZero) == 0 {
-		s.makeA()
+		if _, err := s.makeA(); err != nil {
+			return nil
+		}
 	}
 	return s.ephemeralPublicA
 }
 
-// IsPublicValid checks to see whether public A or B is valid within the group
-// A client can do very bad things by sending a malicious A to the server.
-// The server can do mildly bad things by sending a malicious B to the client.
-// This method is public in case the user wishes to check those values earlier than
-// than using SetOthersPublic(), which also performs this check.
+/*
+IsPublicValid checks to see whether public A or B is valid within the group.
+
+A client can do very bad things by sending a malicious A to the server.
+The server can do mildly bad things by sending a malicious B to the client.
+This method is public in case the user wishes to check those values earlier than
+than using SetOthersPublic(), which also performs this check.
+*/
 func (s *SRP) IsPublicValid(AorB *big.Int) bool {
 
 	result := big.Int{}
@@ -192,10 +204,13 @@ func (s *SRP) IsPublicValid(AorB *big.Int) bool {
 	return true
 }
 
-// Verifier retruns the verifier as calculated by the client.
-// On first enrollment, the client will need to send the verifier to the server,
-// which the server will store as its long term secret. Only a client can
-// compute the verifier as it requires knowledge of x.
+/*
+Verifier retruns the verifier v as calculated by the client.
+
+On first enrollment, the client will need to send the verifier to the server.
+The server will store it as its long term secret.
+Only a client can compute the verifier as it requires knowledge of x.
+*/
 func (s *SRP) Verifier() (*big.Int, error) {
 	if s.isServer {
 		return nil, fmt.Errorf("server may not produce a verifier")
@@ -203,16 +218,18 @@ func (s *SRP) Verifier() (*big.Int, error) {
 	return s.makeVerifier()
 }
 
-// SetOthersPublic sets A if server and B if client
-// Caller *MUST* check for error status and abort the session
-// on error. This setter will invoke IsPublicValid() and error
-// status must be heeded, as other party may attempt to send
-// a malicious ephemeral public key (A or B).
-//
-// When used by the server, this sets A, when used by the client
-// it sets B. But caller doesn't need to worry about whether this
-// is A or B. Instead the caller just needs to know that they
-// are setting the public ephemeral key received from the other party.
+/*
+SetOthersPublic sets A if s is the server and B if s is the client.
+
+The caller doesn't need to worry about whether this is A or B.
+They just need to know that they are setting
+the public ephemeral key received from the other party.
+
+The caller *MUST* check for error status and abort the session
+on error. This setter will invoke IsPublicValid() and error
+status must be heeded, as the other party may attempt to send
+a malicious ephemeral public key (A or B).
+*/
 func (s *SRP) SetOthersPublic(AorB *big.Int) error {
 	if !s.IsPublicValid(AorB) {
 		s.badState = true
@@ -228,22 +245,24 @@ func (s *SRP) SetOthersPublic(AorB *big.Int) error {
 	return nil
 }
 
-// Key creates and returns the session Key
-//
-// Caller MUST check error status.
-//
-// Once the ephemeral public key is received from the other party and properly
-// set, SRP should have enough information to compute the session key.
-//
-// If and only if, each party knowns their respective long term secret
-// (x for client, v for server) will both parties compute the same Key.
-// Be sure to confirm that client and server have the same key before
-// using it.
-//
-// Note that although the resulting key is 256 bits, its effective strength
-// is (typically) far less and depends on the group used.
-// 8 * (SRP.Group.ExponentSize / 2) should provide a reasonable estimate if you
-// need that.
+/*
+Key creates and returns the session Key.
+
+Caller MUST check error status.
+
+Once the ephemeral public key is received from the other party and properly
+set, SRP should have enough information to compute the session key.
+
+If and only if, each party knowns their respective long term secret
+(x for client, v for server) will both parties compute the same Key.
+Be sure to confirm that client and server have the same key before
+using it.
+
+Note that although the resulting key is 256 bits, its effective strength
+is (typically) far less and depends on the group used.
+8 * (SRP.Group.ExponentSize / 2) should provide a reasonable estimate if you
+need that.
+*/
 func (s *SRP) Key() ([]byte, error) {
 	if s.key != nil {
 		return s.key, nil

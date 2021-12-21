@@ -14,7 +14,7 @@ type Group struct {
 	ExponentSize int // RFC 3526 §8
 }
 
-// NewGroup creates and initializes a an SRP group
+// NewGroup creates and initializes a an SRP group.
 func NewGroup() *Group {
 	return &Group{
 		g: &big.Int{},
@@ -22,17 +22,17 @@ func NewGroup() *Group {
 	}
 }
 
-// N returns the modulus of the the group
+// N returns the modulus of the the group.
 func (g *Group) N() *big.Int {
 	return g.n
 }
 
-// Generator returns little g, the generator for the group as a big int
+// Generator returns little g, the generator for the group as a big int.
 func (g *Group) Generator() *big.Int {
 	return g.g
 }
 
-// RFC 5054 groups are listed by their numbers in Appendix A of the RFC
+// RFC 5054 groups are listed by their numbers in Appendix A of the RFC.
 const (
 	// The values correspond to the numbering in Appendix A of RFC 5054
 	// so not using iota mechanism for numbering here.
@@ -49,7 +49,7 @@ const (
 var KnownGroups = make(map[int]*Group)
 
 // MinGroupSize (in bits) sets a lower bound on the size of DH groups
-// that will pass certain internal checks. Defaults to 2048
+// that will pass certain internal checks. Defaults to 2048.
 var MinGroupSize = 2048
 
 // MinExponentSize (in bytes) for generating ephemeral private keys.

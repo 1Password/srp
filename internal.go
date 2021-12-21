@@ -22,7 +22,6 @@ methods in here.
 // According to RFC 3526 §8 there are some specific sizes depending
 // on the group. We go with RFC 3526 values if available, otherwise
 // a minimum of 32 bytes.
-
 func (s *SRP) generateMySecret() *big.Int {
 
 	eSize := maxInt(s.group.ExponentSize, MinExponentSize)

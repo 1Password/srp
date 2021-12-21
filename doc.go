@@ -6,7 +6,7 @@
 /*
 Package srp Secure Remote Password protocol
 
-The principle interface provided by this package is the SRP type. The end aim
+The principal interface provided by this package is the SRP type. The end aim
 of the caller is to to have an SRP server and SRP client arrive at the same
 Key. See the documentation for the SRP structure and its methods for the nitty
 gritty of use.
@@ -18,18 +18,18 @@ we'll add an RFC 5054 mode that does that, but today is not that day.
 The SRP protocol
 
 It would be nice if this package could be used without having some understanding of the SRP protocol,
-but too much of the language and naming is depends on at least some familiarity. Here is a summary.
+but too much of the language and naming depends on at least some familiarity. Here is a summary.
 
 The Secure Remote Password protocol involves a server and a client proving to
 each other that they know (or can derive) their long term secrets.
 The client long term secret is known as "x" and the corresponding server secret,
 the verifier, is known as "v". The verifier is mathematically related to x and is
-computed by the client on first enrollment and transmistted to the server.
+computed by the client on first enrollment and transmitted to the server.
 
 Typically the server will store the verifier and the client will derive x from a user
 secret such as a password. Because the verifier can used like a password hash with
 respect to cracking, the derivation of x should be designed to resist password cracking
-if the verifier compromised.
+if the verifier is compromised.
 
 The client and the server must both use the same Diffie-Hellman group to perform
 their computations.
@@ -86,7 +86,7 @@ from the caller except what the caller absolutely needs to provide.
 
 The key derivation function, KDF()
 
-	x is computed by client via KDF, user secrets, and random salt, s.
+	x is computed by the client via KDF, user secrets, and random salt, s.
 
 	x = KDF(...)
 	v = g^x
@@ -105,7 +105,7 @@ This is particularly true of SRP.Key() and SetOthersPublic()
 2. Client: Using an appropriate key derivation function for deriving x
 from the user's password (and nudging user toward a good password)
 
-3. Server: Storing the v (send by the client on first enrollment) securely.
+3. Server: Storing the v securely (sent by the client on first enrollment).
 A captured v can be used to masquerade as the server and be used like a password hash in a password cracking attempt
 
 4. Both: Proving to each other that both have the same key. The package includes methods

@@ -1,8 +1,8 @@
 package srp
 
 import (
-	"crypto/subtle"
 	"crypto/sha256"
+	"crypto/subtle"
 	"fmt"
 )
 
@@ -19,7 +19,7 @@ We will use math/big Bytes() to get the absolute value as a big-endian byte
 slice (without padding to size of N)
 */
 
-// M returns the server's proof of knowledge of key
+// M returns the server's proof of knowledge of key.
 func (s *SRP) M(salt []byte, uname string) ([]byte, error) {
 	if s.m != nil || len(s.m) != 0 {
 		return s.m, nil
@@ -65,7 +65,7 @@ func (s *SRP) M(salt []byte, uname string) ([]byte, error) {
 }
 
 // GoodServerProof takes the post-key negotiation proof from the server
-// and compares it with what we (the client think it should be)
+// and compares it with what we (the client) think it should be.
 func (s *SRP) GoodServerProof(salt []byte, uname string, proof []byte) bool {
 	myM, err := s.M(salt, uname)
 	if err != nil {
@@ -77,7 +77,7 @@ func (s *SRP) GoodServerProof(salt []byte, uname string, proof []byte) bool {
 	return s.isServerProved
 }
 
-// ClientProof constructs the clients proof that it knows the key
+// ClientProof constructs the clients proof from which it knows the key.
 func (s *SRP) ClientProof() ([]byte, error) {
 	if !s.isServer && !s.isServerProved {
 		return nil, fmt.Errorf("don't construct client proof until server is proved")
@@ -106,7 +106,7 @@ func (s *SRP) ClientProof() ([]byte, error) {
 	return s.cProof, nil
 }
 
-// GoodClientProof returns true if the given proof is the same as what we calculate
+// GoodClientProof returns true if the given proof is the same as what we calculate.
 func (s *SRP) GoodClientProof(proof []byte) bool {
 	myCP, err := s.ClientProof()
 	if err != nil {

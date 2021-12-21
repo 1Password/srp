@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// NumberFromString converts a string (hex) to a number
+// NumberFromString converts a string (hex) to a number.
 func NumberFromString(s string) *big.Int {
 	n := strings.Replace(s, " ", "", -1)
 

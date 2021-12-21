@@ -3,11 +3,11 @@ package srp
 import "math/big"
 
 /*
- * We export a few ways to manipulate unexported parts of an SRP object so
- * users of SRP can perform some tests of their own with certain fixed
- * values. This methods are all named TestOnly... and should not be used
- * outside of such a testing context
- */
+We export a few ways to manipulate unexported parts of an SRP object so
+users of SRP can perform some tests of their own with certain fixed
+values. This methods are all named TestOnly... and should not be used
+outside of such a testing context
+*/
 
 // TestOnlyResetKey sets to final key back to nil. This is used only for testing
 // integration with caller
