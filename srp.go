@@ -8,7 +8,10 @@ package srp
  **/
 
 import (
+	"bytes"
 	"crypto/sha256"
+	"encoding"
+	"encoding/gob"
 	"fmt"
 	"math/big"
 )
@@ -328,4 +331,68 @@ func (s *SRP) Key() ([]byte, error) {
 		return nil, fmt.Errorf("key size should be %d, but instead is %d", h.Size(), len(s.key))
 	}
 	return s.key, nil
+}
+
+var (
+	_ encoding.BinaryMarshaler   = &SRP{}
+	_ encoding.BinaryUnmarshaler = &SRP{}
+)
+
+func (s *SRP) MarshalBinary() (_ []byte, err error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	// This array must be in the exact same order as the array used for unmarshalling.
+	values := []interface{}{
+		s.group, // Has its own marshaller.
+		s.ephemeralPrivate,
+		s.ephemeralPublicA,
+		s.ephemeralPublicB,
+		s.x,
+		s.v,
+		s.u,
+		s.k,
+		s.premasterKey,
+		s.key,
+		s.isServer,
+		s.badState,
+		s.isServerProved,
+		s.m,
+		s.cProof,
+	}
+	for _, value := range values {
+		if err = enc.Encode(value); err != nil {
+			return nil, err
+		}
+	}
+
+	return buf.Bytes(), nil
+}
+
+func (s *SRP) UnmarshalBinary(data []byte) (err error) {
+	dec := gob.NewDecoder(bytes.NewBuffer(data))
+	// This array must be in the exact same order as the array used for marshaling.
+	values := []interface{}{
+		&s.group, // Has its own unmarshaller.
+		&s.ephemeralPrivate,
+		&s.ephemeralPublicA,
+		&s.ephemeralPublicB,
+		&s.x,
+		&s.v,
+		&s.u,
+		&s.k,
+		&s.premasterKey,
+		&s.key,
+		&s.isServer,
+		&s.badState,
+		&s.isServerProved,
+		&s.m,
+		&s.cProof,
+	}
+	for _, value := range values {
+		if err = dec.Decode(value); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

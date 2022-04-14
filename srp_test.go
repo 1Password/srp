@@ -2,7 +2,7 @@ package srp
 
 import (
 	"bytes"
-	rand "crypto/rand"
+	"crypto/rand"
 	"encoding/hex"
 	"math/big"
 	"strings"
@@ -416,6 +416,97 @@ func TestCalculateU(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestSRP_Marshal_Unmarshal_Binary(t *testing.T) {
+	// Everything here is just to get the server into a state where it has some data associated with this particular
+	// exchange. This way it can be marshaled, and we can assert that unmarshalling it retains the data properly.
+	var err error
+	var A, B *big.Int
+
+	group := RFC5054Group4096
+	pw := "SuperSecureP@ssw0rd"
+	salt := make([]byte, 16)
+	if n, err := rand.Read(salt); err != nil {
+		t.Error(err)
+	} else if n != 16 {
+		t.Error("failed to generate 8 byte salt")
+	}
+	username := "generic@email.tld"
+	x := KDFRFC5054(salt, username, pw) // Really. Don't use this KDF
+
+	client := NewSRPClient(KnownGroups[group], x, nil)
+	if client == nil {
+		t.Error("couldn't setup client")
+	}
+
+	v, err := client.Verifier()
+	if err != nil {
+		t.Errorf("failed to create verifier: %+v", err)
+	}
+
+	A = client.EphemeralPublic()
+
+	server := NewSRPServer(KnownGroups[group], v, nil)
+	if err = server.SetOthersPublic(A); err != nil {
+		t.Error(err)
+	}
+	if B = server.EphemeralPublic(); B == nil {
+		t.Error("server couldn't make B")
+	}
+	serverKey, err := server.Key()
+	if err != nil || serverKey == nil {
+		t.Errorf("something went wrong making server key: %s\n", err)
+	}
+
+	// Now actually marshal the server object.
+	data, err := server.MarshalBinary()
+	if err != nil {
+		t.Errorf("Failed to marshal SRP into binary: %+v", err)
+	}
+	if len(data) == 0 {
+		t.Errorf("Resulting byte array was empty")
+	}
+
+	newServer := &SRP{}
+	err = newServer.UnmarshalBinary(data)
+	if err != nil {
+		t.Errorf("Failed to unmarshal binary data into SRP: %+v", err)
+	}
+
+	// Now that we have a new server, have the client do a bit more work; then we will perform the next step on the new
+	// server that we have made.
+	if err = client.SetOthersPublic(B); err != nil {
+		t.Errorf("failed to set others public: %+v", err)
+	}
+	clientKey, err := client.Key()
+	if err != nil || clientKey == nil {
+		t.Errorf("something went wrong making server key: %s", err)
+	}
+
+	serverProof, err := newServer.M(salt, username)
+	if err != nil {
+		t.Errorf("failed to create server proof with new server: %+v", serverProof)
+	}
+
+	// client tests that the server sent a good proof
+	if !client.GoodServerProof(salt, username, serverProof) {
+		// Client must bail and not send a its own proof back to the server
+		t.Error("bad proof from server")
+	}
+
+	// Only after having a valid server proof will the client construct its own
+	clientProof, err := client.ClientProof()
+	if err != nil {
+		t.Errorf("failed to create client proof: %+v", err)
+	}
+
+	// client sends its proof to the server. Server checks
+	if !newServer.GoodClientProof(clientProof) {
+		t.Error("bad proof from client")
+	}
+
+	// If we got to this point then that means the server marshalling and unmarshalling works.
 }
 
 /**
