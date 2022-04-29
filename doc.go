@@ -1,5 +1,5 @@
 /**
- ** Copyright 2017 AgileBits, Inc.
+ ** Copyright 2017-2022 AgileBits, Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License").
  **/
 
@@ -22,7 +22,7 @@ but too much of the language and naming depends on at least some familiarity. He
 
 The Secure Remote Password protocol involves a server and a client proving to
 each other that they know (or can derive) their long term secrets.
-The client long term secret is known as "x" and the corresponding server secret,
+The client's long term secret is known as "x" and the corresponding server secret,
 the verifier, is known as "v". The verifier is mathematically related to x and is
 computed by the client on first enrollment and transmitted to the server.
 
@@ -34,8 +34,8 @@ if the verifier is compromised.
 The client and the server must both use the same Diffie-Hellman group to perform
 their computations.
 
-The server and the client each send an ephemeral public key to each other
-(The client sends A; the server sends B)
+The server and the client each send an ephemeral public key to each other.
+(The client sends A; the server sends B.)
 With their private knowledge of their own ephemeral secrets (a or b) and their
 private knowledge of x (for the client) and v (for the server) along with public
 knowledge they are able to prove to each other that they know their respective
@@ -43,7 +43,7 @@ secrets and can generate a session key, K, which may be used for further encrypt
 during the session.
 
 Quoting from http://srp.stanford.edu/design.html (with some modification
-for KDF)
+for KDF and and checks)
 
     Names and notation
 	N    A large safe prime (N = 2q+1, where q is prime)
@@ -64,8 +64,9 @@ for KDF)
 
     The authentication protocol itself goes as follows
 
-	User -> Host:  I, A = g^a                  (identifies self, a = random number)
-	Host -> User:  s, B = kv + g^b             (sends salt, b = random number)
+	User -> Host:  I, A = g^a           (identifies self, a = random number)
+	Host: check that A mod N != 0       (A mod N = 0 MUST be treated as authn failure)
+	Host -> User:  s, B = kv + g^b      (sends salt, b = random number)
 
 	Both:  u = H(A, B)
 
@@ -106,7 +107,8 @@ This is particularly true of SRP.Key() and SetOthersPublic()
 from the user's password (and nudging user toward a good password)
 
 3. Server: Storing the v securely (sent by the client on first enrollment).
-A captured v can be used to masquerade as the server and be used like a password hash in a password cracking attempt
+A captured v can be used to impersonate the server.
+The verifier, v, can also be used like a password hash in a password cracking attempt
 
 4. Both: Proving to each other that both have the same key. The package includes methods
 that can assist with that.
