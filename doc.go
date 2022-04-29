@@ -8,7 +8,7 @@ Package srp Secure Remote Password protocol
 
 The principal interface provided by this package is the SRP type. The end aim
 of the caller is to to have an SRP server and SRP client arrive at the same
-Key. See the documentation for the SRP structure and its methods for the nitty
+key. See the documentation for the SRP structure and its methods for the nitty
 gritty of use.
 
 BUG(jpg): This does not use the same padding and hashing scheme as in RFC 5054,
