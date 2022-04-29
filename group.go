@@ -1,6 +1,9 @@
 package srp
 
 import (
+	"bytes"
+	"encoding/gob"
+	"fmt"
 	"math/big"
 )
 
@@ -30,6 +33,47 @@ func (g *Group) N() *big.Int {
 // Generator returns little g, the generator for the group as a big int.
 func (g *Group) Generator() *big.Int {
 	return g.g
+}
+
+// MarshalBinary returns a binary gob with the complete state of the Group object.
+// It can be used in conjunction with UnmarshalBinary() to use this module in a
+// context in which mutating state of objects is inappropriate.
+func (g *Group) MarshalBinary() (_ []byte, err error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	// This array must be in the exact same order as the array used for unmarshalling.
+	values := []interface{}{
+		g.g,
+		g.n,
+		g.ExponentSize,
+		g.Label,
+	}
+	for _, value := range values {
+		if err = enc.Encode(value); err != nil {
+			return nil, fmt.Errorf("encoding failure: %w", err)
+		}
+	}
+
+	return buf.Bytes(), nil
+}
+
+// UnmarshalBinary unmarshals a binary gob creates with MarshalBinary.
+func (g *Group) UnmarshalBinary(data []byte) (err error) {
+	dec := gob.NewDecoder(bytes.NewBuffer(data))
+	// This array must be in the exact same order as the array used for marshaling.
+	values := []interface{}{
+		&g.g,
+		&g.n,
+		&g.ExponentSize,
+		&g.Label,
+	}
+	for _, value := range values {
+		if err = dec.Decode(value); err != nil {
+			return fmt.Errorf("decoding failure: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // RFC 5054 groups are listed by their numbers in Appendix A of the RFC.
