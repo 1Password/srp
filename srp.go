@@ -338,7 +338,10 @@ var (
 	_ encoding.BinaryUnmarshaler = &SRP{}
 )
 
-func (s *SRP) MarshalBinary() (_ []byte, err error) {
+// MarshalBinary returns a binary gob with the complete state of the SRP object.
+// It can be used in conjunction with UnmarshalBinary() to use this module in a
+// context in which mutating state of objects is inappropriate.
+func (s *SRP) MarshalBinary() (binaryEncoding []byte, err error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	// This array must be in the exact same order as the array used for unmarshalling.
@@ -368,6 +371,7 @@ func (s *SRP) MarshalBinary() (_ []byte, err error) {
 	return buf.Bytes(), nil
 }
 
+// UnmarshalBinary unmarshals a binary gob creates with MarshalBinary.
 func (s *SRP) UnmarshalBinary(data []byte) (err error) {
 	dec := gob.NewDecoder(bytes.NewBuffer(data))
 	// This array must be in the exact same order as the array used for marshaling.

@@ -35,6 +35,9 @@ func (g *Group) Generator() *big.Int {
 	return g.g
 }
 
+// MarshalBinary returns a binary gob with the complete state of the Group object.
+// It can be used in conjunction with UnmarshalBinary() to use this module in a
+// context in which mutating state of objects is inappropriate.
 func (g *Group) MarshalBinary() (_ []byte, err error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
@@ -54,6 +57,7 @@ func (g *Group) MarshalBinary() (_ []byte, err error) {
 	return buf.Bytes(), nil
 }
 
+// UnmarshalBinary unmarshals a binary gob creates with MarshalBinary.
 func (g *Group) UnmarshalBinary(data []byte) (err error) {
 	dec := gob.NewDecoder(bytes.NewBuffer(data))
 	// This array must be in the exact same order as the array used for marshaling.
