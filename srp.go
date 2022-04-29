@@ -78,9 +78,9 @@ var (
 /*
 NewSRPClient sets up an SRP object for a client.
 
-Recall that group is the De-Hellman group to be used,
+Recall that group is the Diffie-Hellman group to be used,
 x is your long term secret and k is the set multiplier.
-Pass in a a nil k if you want it to be generated for you.
+Pass in a nil k if you want it to be generated for you.
 Note that you need the same k on both server and client.
 */
 func NewSRPClient(group *Group, x, k *big.Int) *SRP {
@@ -90,7 +90,7 @@ func NewSRPClient(group *Group, x, k *big.Int) *SRP {
 /*
 NewSRPServer sets up an SRP object for a server.
 
-Recall that group is the De-Hellman group to be used,
+Recall that group is the Diffie-Hellman group to be used,
 v is your long term secret and k is the set multiplier.
 Pass in a a nil k if you want it to be generated for you.
 Note that you need the same k on both server and client.

@@ -1,7 +1,6 @@
 package srp
 
 import (
-
 	// #nosec See docs for KDFRFC5054 for warnings.
 	"crypto/sha1"
 	"math/big"
