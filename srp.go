@@ -361,7 +361,7 @@ func (s *SRP) MarshalBinary() (_ []byte, err error) {
 	}
 	for _, value := range values {
 		if err = enc.Encode(value); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("encoding failure: %w", err)
 		}
 	}
 
@@ -390,7 +390,7 @@ func (s *SRP) UnmarshalBinary(data []byte) (err error) {
 	}
 	for _, value := range values {
 		if err = dec.Decode(value); err != nil {
-			return err
+			return fmt.Errorf("decoding failure: %w", err)
 		}
 	}
 

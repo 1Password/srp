@@ -3,6 +3,7 @@ package srp
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"math/big"
 )
 
@@ -46,7 +47,7 @@ func (g *Group) MarshalBinary() (_ []byte, err error) {
 	}
 	for _, value := range values {
 		if err = enc.Encode(value); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("encoding failure: %w", err)
 		}
 	}
 
@@ -64,7 +65,7 @@ func (g *Group) UnmarshalBinary(data []byte) (err error) {
 	}
 	for _, value := range values {
 		if err = dec.Decode(value); err != nil {
-			return err
+			return fmt.Errorf("decoding failure: %w", err)
 		}
 	}
 
