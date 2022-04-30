@@ -8,16 +8,14 @@ linters:
     - funlen
     - gochecknoglobals
     - gochecknoinits
-    - gocritic
     - godox
     - goerr113
     - gomnd
     - gomoddirectives
     - ifshort
-    - lll
+   # - lll
     - nlreturn
     - paralleltest
-    - stylecheck
     - testpackage
     - varnamelen
     - wsl
