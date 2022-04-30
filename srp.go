@@ -182,6 +182,7 @@ The server can do mildly bad things by sending a malicious B to the client.
 This method is public in case the user wishes to check those values earlier than
 than using SetOthersPublic(), which also performs this check.
 */
+//nolint:gocritic // A != a. Case matters
 func (s *SRP) IsPublicValid(AorB *big.Int) bool {
 	result := big.Int{}
 	// There are three ways to fail.
@@ -231,6 +232,7 @@ on error. This setter will invoke IsPublicValid() and error
 status must be heeded, as the other party may attempt to send
 a malicious ephemeral public key (A or B).
 */
+//nolint:gocritic // A != a. Case matters
 func (s *SRP) SetOthersPublic(AorB *big.Int) error {
 	if !s.IsPublicValid(AorB) {
 		s.badState = true

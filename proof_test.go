@@ -58,46 +58,46 @@ func TestM(t *testing.T) {
 // unnecessary. For for future tests, I will want to modify the client or the server
 // SRP object on its own, without changing the values in the other.
 
-func (z *Group) copy(x *Group) *Group {
+func (g *Group) copy(x *Group) *Group {
 	if x == nil {
 		return nil
 	}
-	z.g = safeSet(x.g)
-	z.n = safeSet(x.n)
-	z.Label = x.Label
-	z.ExponentSize = x.ExponentSize
-	return z
+	g.g = safeSet(x.g)
+	g.n = safeSet(x.n)
+	g.Label = x.Label
+	g.ExponentSize = x.ExponentSize
+	return g
 }
 
-func (z *SRP) copy(x *SRP) *SRP {
+func (s *SRP) copy(x *SRP) *SRP {
 	if x == nil {
 		return nil
 	}
 
 	// There has GOT be a better way of going this.
-	z.group = new(Group).copy(x.group)
+	s.group = new(Group).copy(x.group)
 
 	// Using Set to copy the big Ints. I really don't
 	// know whether straight assignment would work.
 	// There are things about go that I don't get
-	z.ephemeralPrivate = safeSet(x.ephemeralPrivate)
-	z.ephemeralPublicA = safeSet(x.ephemeralPublicA)
-	z.ephemeralPublicB = safeSet(x.ephemeralPublicB)
-	z.x = safeSet(x.x)
-	z.v = safeSet(x.v)
-	z.u = safeSet(x.u)
-	z.k = safeSet(x.k)
-	z.premasterKey = safeSet(x.premasterKey)
+	s.ephemeralPrivate = safeSet(x.ephemeralPrivate)
+	s.ephemeralPublicA = safeSet(x.ephemeralPublicA)
+	s.ephemeralPublicB = safeSet(x.ephemeralPublicB)
+	s.x = safeSet(x.x)
+	s.v = safeSet(x.v)
+	s.u = safeSet(x.u)
+	s.k = safeSet(x.k)
+	s.premasterKey = safeSet(x.premasterKey)
 
-	z.key = x.key
+	s.key = x.key
 
-	z.isServer = x.isServer
-	z.badState = x.badState
-	z.isServerProved = x.isServerProved
-	z.m = x.m
-	z.cProof = x.cProof
+	s.isServer = x.isServer
+	s.badState = x.badState
+	s.isServerProved = x.isServerProved
+	s.m = x.m
+	s.cProof = x.cProof
 
-	return z
+	return s
 }
 
 func safeSet(x *big.Int) *big.Int {
