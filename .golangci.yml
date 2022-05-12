@@ -18,6 +18,7 @@ linters:
     - testpackage
     - varnamelen
     - wsl
+    - nonamedreturns
     # deprecated
     - golint
     - interfacer
