@@ -21,6 +21,7 @@ var expectedVerifier = hexNumberString(
 		"EA53D15C 1AFF87B2 B9DA6E04 E058AD51 CC72BFC9 033B564E 26480D78" +
 		"E955A5E2 9E7AB245 DB2BE315 E2099AFB")
 
+//nolint:exhaustruct
 var g1024 = &Group{g: big.NewInt(2), n: NumberFromString("0x EEAF0AB9ADB38DD69C33F80AFA8FC5E86072618775FF3C0B9EA2314C" +
 	"9C256576D674DF7496EA81D3383B4813D692C6E0E0D5D8E250B98BE4" +
 	"8E495C1D6089DAD15DC7D7B46154D6B6CE8EF4AD69B15D4982559B29" +
@@ -469,7 +470,7 @@ func TestSRP_Marshal_Unmarshal_Binary(t *testing.T) {
 		t.Errorf("Resulting byte array was empty")
 	}
 
-	newServer := &SRP{}
+	newServer := &SRP{} //nolint:exhaustruct
 	err = newServer.UnmarshalBinary(data)
 	if err != nil {
 		t.Errorf("Failed to unmarshal binary data into SRP: %+v", err)

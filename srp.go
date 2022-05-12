@@ -335,6 +335,7 @@ func (s *SRP) Key() ([]byte, error) {
 	return s.key, nil
 }
 
+//nolint:exhaustruct
 var (
 	_ encoding.BinaryMarshaler   = &SRP{}
 	_ encoding.BinaryUnmarshaler = &SRP{}
