@@ -61,6 +61,36 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 	return s.k, nil
 }
 
+// makeLittleKPadded initializes multiplier based on group parameters
+// k = H(N, g)
+func (s *SRP) makeLittleKPadded() (*big.Int, error) {
+	if s.group == nil {
+		return nil, fmt.Errorf("group not set")
+	}
+
+	// Get N and g as byte arrays, with g zero padded to be same size as N
+	N := s.group.n.Bytes()
+	g := make([]byte, len(N))
+	g = s.group.g.FillBytes(g)
+
+	h := sha256.New()
+	_, err := h.Write(N)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write N to hasher: %w", err)
+	}
+
+	// we need to write byte_length(N) - byte_length(g) zero bytes to hasher.
+
+	b, err := h.Write(g)
+	if err != nil || b != len(N) {
+		return nil, fmt.Errorf("failed to write g to hasher: %w", err)
+	}
+	k := &big.Int{}
+	s.k = k.SetBytes(h.Sum(nil))
+
+	return s.k, nil
+}
+
 // makeA calculates A (if necessary) and returns it.
 func (s *SRP) makeA() (*big.Int, error) {
 	if s.group == nil {
@@ -169,6 +199,41 @@ func (s *SRP) calculateU() (*big.Int, error) {
 		return nil, fmt.Errorf("failed to write to hasher: %w", err)
 	}
 
+	u := &big.Int{}
+	s.u = u.SetBytes(h.Sum(nil))
+	if s.u.Cmp(bigZero) == 0 {
+		return nil, fmt.Errorf("u == 0, which is a bad thing")
+	}
+	return s.u, nil
+}
+
+// calculateU creates a hash A and B as specified in RFC5054 using SHA256
+func (s *SRP) calculateUStd() (*big.Int, error) {
+	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
+		s.u = nil
+		return nil, fmt.Errorf("both A and B must be known to calculate u")
+	}
+
+	// A and B will be big-endian byte arrays padded to byte length of N
+	// FillBytes() panics if buffer isn't large enough, so we must reduce A and B first.
+	grp := s.group
+	lenN := len(grp.N().Bytes())
+	A := make([]byte, lenN)
+	B := make([]byte, lenN)
+	(&big.Int{}).Mod(s.ephemeralPublicA, grp.N()).FillBytes(A)
+	(&big.Int{}).Mod(s.ephemeralPublicB, grp.N()).FillBytes(B)
+
+	h := sha256.New()
+
+	b, err := h.Write(A)
+	if err != nil || b != lenN {
+		return nil, fmt.Errorf("failed to write A to hasher: %w", err)
+	}
+
+	b, err = h.Write(B)
+	if err != nil || b != lenN {
+		return nil, fmt.Errorf("failed to write B to hasher: %w", err)
+	}
 	u := &big.Int{}
 	s.u = u.SetBytes(h.Sum(nil))
 	if s.u.Cmp(bigZero) == 0 {
