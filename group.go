@@ -17,14 +17,6 @@ type Group struct {
 	ExponentSize int // RFC 3526 §8
 }
 
-// NewGroup creates and initializes a an SRP group.
-func NewGroup() *Group {
-	return &Group{
-		g: &big.Int{},
-		n: &big.Int{},
-	}
-}
-
 // N returns the modulus of the the group.
 func (g *Group) N() *big.Int {
 	return g.n
