@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"hash"
 	"math/big"
 )
 
@@ -12,7 +13,7 @@ import (
 // Recommended ExponentSize (in bytes) is based on the
 // lower estimates given in section 8 of RFC 3526 for the ephemeral random exponents.
 type Group struct {
-	g, n         *big.Int
+	g, n, k      *big.Int // generator, modulus, k = H(n, PAD(g))
 	Label        string
 	ExponentSize int // RFC 3526 §8
 }
@@ -25,6 +26,45 @@ func (g *Group) N() *big.Int {
 // Generator returns little g, the generator for the group as a big int.
 func (g *Group) Generator() *big.Int {
 	return g.g
+}
+
+// LittleK returns H(N, PAD(g)), the multiplier used SRP computations.
+func (g *Group) LittleK(h hash.Hash) *big.Int {
+	if g.k != nil {
+		return g.k
+	}
+
+	k, err := g.computeK(h)
+	if err != nil {
+		return nil
+	}
+	g.k = k
+	return k
+}
+
+// computeK returns k=H(N, PAD(g)) or error if there was some hashing error.
+func (g *Group) computeK(h hash.Hash) (*big.Int, error) {
+	// Get N and g as byte arrays, with g zero padded to be same size as N
+	NBytes := g.n.Bytes()
+	gBytes := make([]byte, len(NBytes))
+	gBytes = g.g.FillBytes(gBytes)
+
+	// There is no way at this point to check whether h is among
+	// the hash functions we want to allow. (Well, I suppose we could
+	// hash things with known hashes.)
+	h.Reset()
+	_, err := h.Write(NBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write N to hasher: %w", err)
+	}
+
+	b, err := h.Write(gBytes)
+	if err != nil || b != len(NBytes) {
+		return nil, fmt.Errorf("failed to write g to hasher: %w", err)
+	}
+	k := (&big.Int{}).SetBytes(h.Sum(nil))
+
+	return k, nil
 }
 
 // MarshalBinary returns a binary gob with the complete state of the Group object.
@@ -105,6 +145,7 @@ func init() {
 	g2048 := &Group{
 		g:            big.NewInt(2),
 		n:            g2048n,
+		k:            nil,
 		Label:        "5054A2048",
 		ExponentSize: 27,
 	}
@@ -128,6 +169,7 @@ func init() {
 	g3072 := &Group{
 		g:            big.NewInt(5),
 		n:            g3072n,
+		k:            nil,
 		Label:        "5054A3072",
 		ExponentSize: 32,
 	}
@@ -155,6 +197,7 @@ func init() {
 	g4096 := &Group{
 		g:            big.NewInt(5),
 		n:            g4096n,
+		k:            nil,
 		Label:        "5054A4096",
 		ExponentSize: 38,
 	}
@@ -191,6 +234,7 @@ func init() {
 	g6144 := &Group{
 		g:            big.NewInt(5),
 		n:            g6144n,
+		k:            nil,
 		Label:        "5054A6144",
 		ExponentSize: 43,
 	}
@@ -236,6 +280,7 @@ func init() {
 	g8192 := &Group{
 		g:            big.NewInt(19),
 		n:            g8192n,
+		k:            nil,
 		Label:        "5054A8192",
 		ExponentSize: 48,
 	}
