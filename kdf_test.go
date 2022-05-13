@@ -35,7 +35,11 @@ func TestKDFRFC5054(t *testing.T) {
 	vec.salt = strings.ReplaceAll(vec.salt, " ", "")
 	s, _ := hex.DecodeString(vec.salt)
 
-	x := KDFRFC5054(s, vec.I, vec.P)
+	x, err := KDFRFC5054(s, vec.I, vec.P)
+	if err != nil {
+		t.Fatalf("KDFRFC5054: %v", err)
+	}
+
 	if expX.Cmp(x) != 0 {
 		t.Error("didn't derive correct x")
 	}
