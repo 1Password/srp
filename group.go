@@ -29,11 +29,15 @@ func (g *Group) Generator() *big.Int {
 }
 
 // LittleK returns H(N, PAD(g)), the multiplier used SRP computations.
-func (g *Group) LittleK(h hash.Hash) *big.Int {
+func (g *Group) LittleK(hashName string) *big.Int {
 	if g.k != nil {
 		return g.k
 	}
 
+	h := Hash.NewWith(hashName)
+	if h == nil {
+		return nil
+	}
 	k, err := g.computeK(h)
 	if err != nil {
 		return nil
@@ -49,10 +53,6 @@ func (g *Group) computeK(h hash.Hash) (*big.Int, error) {
 	gBytes := make([]byte, len(NBytes))
 	gBytes = g.g.FillBytes(gBytes)
 
-	// There is no way at this point to check whether h is among
-	// the hash functions we want to allow. (Well, I suppose we could
-	// hash things with known hashes.)
-	h.Reset()
 	_, err := h.Write(NBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write N to hasher: %w", err)

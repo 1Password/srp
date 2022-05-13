@@ -44,9 +44,11 @@ func (s *SRP) setHashName(hn string) {
 
 // makeLittleK is a wrapper for standard and non-standard variants.
 func (s *SRP) makeLittleK() (*big.Int, error) {
+	if err := Hash.IsValid(s.hashName); err != nil {
+		return nil, fmt.Errorf("cannot make k: %w", err)
+	}
 	if s.stdPadding {
-		h := Hash.NewWith(s.hashName)
-		k := s.group.LittleK(h)
+		k := s.group.LittleK(s.hashName)
 		if k == nil {
 			return nil, fmt.Errorf("failed to get little k")
 		}
