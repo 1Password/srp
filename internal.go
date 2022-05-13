@@ -45,7 +45,12 @@ func (s *SRP) setHashName(hn string) {
 // makeLittleK is a wrapper for standard and non-standard variants.
 func (s *SRP) makeLittleK() (*big.Int, error) {
 	if s.stdPadding {
-		return s.MakeLittleKStd()
+		h := Hash.NewWith(s.hashName)
+		k := s.group.LittleK(h)
+		if k == nil {
+			return nil, fmt.Errorf("failed to get little k")
+		}
+		return k, nil
 	}
 	return s.makeLittleKNonStd()
 }
@@ -53,7 +58,7 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 // makeLittleKNonStd initializes multiplier based on group parameters
 // k = H(N, g)
 // This does _not_ conform to RFC 5054 padding.
-// Use MakeLittleKPadded for a compliant version.
+// If you want standard padding use s.group.LittleK().
 func (s *SRP) makeLittleKNonStd() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
@@ -72,39 +77,6 @@ func (s *SRP) makeLittleKNonStd() (*big.Int, error) {
 	}
 	_, err = h.Write(s.group.g.Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("failed to write g to hasher: %w", err)
-	}
-	k := &big.Int{}
-	s.k = k.SetBytes(h.Sum(nil))
-
-	return s.k, nil
-}
-
-// MakeLittleKPadded initializes multiplier based on group parameters.
-// k = H(N, g) using RFC 5054 padding.
-func (s *SRP) MakeLittleKStd() (*big.Int, error) {
-	if s.group == nil {
-		return nil, fmt.Errorf("group not set")
-	}
-
-	// Get N and g as byte arrays, with g zero padded to be same size as N
-	N := s.group.n.Bytes()
-	g := make([]byte, len(N))
-	g = s.group.g.FillBytes(g)
-
-	h := Hash.NewWith(s.hashName)
-	if h == nil {
-		return nil, fmt.Errorf("failed to set up hash function")
-	}
-	_, err := h.Write(N)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write N to hasher: %w", err)
-	}
-
-	// we need to write byte_length(N) - byte_length(g) zero bytes to hasher.
-
-	b, err := h.Write(g)
-	if err != nil || b != len(N) {
 		return nil, fmt.Errorf("failed to write g to hasher: %w", err)
 	}
 	k := &big.Int{}
