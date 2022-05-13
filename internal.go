@@ -2,7 +2,6 @@ package srp
 
 import (
 	rand "crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -36,9 +35,15 @@ func (s *SRP) generateMySecret() *big.Int {
 	return s.ephemeralPrivate
 }
 
+// SetHashName allows set something other than "sha256". Please don't.
+func (s *SRP) SetHashName(hn string) {
+	s.hashName = hn
+}
+
 // makeLittleK initializes multiplier based on group parameters
 // k = H(N, g)
-// BUG(jpg): Creation of multiplier, little k, does _not_ conform to RFC 5054 padding.
+// This does _not_ conform to RFC 5054 padding.
+// Use MakeLittleKPadded for a compliant version.
 func (s *SRP) makeLittleK() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
@@ -46,7 +51,11 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 
 	// We will remake k, even if already created, as server needs to
 	// remake it after manually setting k
-	h := sha256.New()
+
+	h := Hash.NewWith(s.hashName)
+	if h == nil {
+		return nil, fmt.Errorf("failed to get hash function")
+	}
 	_, err := h.Write(s.group.n.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("failed to write N to hasher: %w", err)
@@ -61,9 +70,9 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 	return s.k, nil
 }
 
-// makeLittleKPadded initializes multiplier based on group parameters
-// k = H(N, g)
-func (s *SRP) makeLittleKPadded() (*big.Int, error) {
+// MakeLittleKPadded initializes multiplier based on group parameters.
+// k = H(N, g) using RFC 5054 padding.
+func (s *SRP) MakeLittleKPadded() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
@@ -73,7 +82,10 @@ func (s *SRP) makeLittleKPadded() (*big.Int, error) {
 	g := make([]byte, len(N))
 	g = s.group.g.FillBytes(g)
 
-	h := sha256.New()
+	h := Hash.NewWith(s.hashName)
+	if h == nil {
+		return nil, fmt.Errorf("failed to set up hash function")
+	}
 	_, err := h.Write(N)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write N to hasher: %w", err)
@@ -189,7 +201,10 @@ func (s *SRP) calculateU() (*big.Int, error) {
 		return nil, fmt.Errorf("both A and B must be known to calculate u")
 	}
 
-	h := sha256.New()
+	h := Hash.NewWith(s.hashName)
+	if h == nil {
+		return nil, fmt.Errorf("failed to set up hash function")
+	}
 
 	trimmedHexPublicA := serverStyleHexFromBigInt(s.ephemeralPublicA)
 	trimmedHexPublicB := serverStyleHexFromBigInt(s.ephemeralPublicB)
@@ -207,7 +222,7 @@ func (s *SRP) calculateU() (*big.Int, error) {
 	return s.u, nil
 }
 
-// calculateU creates a hash A and B as specified in RFC5054 using SHA256
+// calculateU creates a hash A and B as specified in RFC5054 using SHA256.
 func (s *SRP) calculateUStd() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		s.u = nil
@@ -223,7 +238,10 @@ func (s *SRP) calculateUStd() (*big.Int, error) {
 	(&big.Int{}).Mod(s.ephemeralPublicA, grp.N()).FillBytes(A)
 	(&big.Int{}).Mod(s.ephemeralPublicB, grp.N()).FillBytes(B)
 
-	h := sha256.New()
+	h := Hash.NewWith(s.hashName)
+	if h == nil {
+		return nil, fmt.Errorf("failed to set up hash function")
+	}
 
 	b, err := h.Write(A)
 	if err != nil || b != lenN {

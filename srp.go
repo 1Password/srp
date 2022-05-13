@@ -9,7 +9,6 @@ package srp
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding"
 	"encoding/gob"
 	"fmt"
@@ -68,6 +67,7 @@ type SRP struct {
 	isServerProved   bool   // whether server has proved knowledge of key
 	isServer         bool
 	badState         bool
+	hashName         string // Hash used for constructing k and u
 }
 
 var (
@@ -116,6 +116,7 @@ func newSRP(serverSide bool, group *Group, xORv, k *big.Int) *SRP {
 
 		badState: false,
 		isServer: serverSide,
+		hashName: "sha256",
 
 		m:              nil,
 		cProof:         nil,
@@ -276,7 +277,7 @@ func (s *SRP) Key() ([]byte, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
-	// This test is so I'm not lying to gosec wrt to G105
+	// This test is here so I'm not lying to gosec wrt to G105
 	if s.group.n.Cmp(bigZero) == 0 {
 		return nil, fmt.Errorf("group has 0 modulus")
 	}
@@ -322,7 +323,10 @@ func (s *SRP) Key() ([]byte, error) {
 
 	s.premasterKey.Exp(b, e, s.group.n)
 
-	h := sha256.New()
+	h := Hash.NewWith(s.hashName)
+	if h == nil {
+		return nil, fmt.Errorf("failed to set up hash function")
+	}
 	if _, err := h.Write([]byte(fmt.Sprintf("%x", s.premasterKey))); err != nil {
 		return nil, fmt.Errorf("failed to write premasterKey to hasher: %w", err)
 	}
