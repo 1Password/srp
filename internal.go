@@ -37,6 +37,7 @@ func (s *SRP) generateMySecret() *big.Int {
 
 // setHashName allows set something other than "sha256". Please don't.
 // TODO(jpg) Find a way that this can be called before k is computed.
+//nolint:unused
 func (s *SRP) setHashName(hn string) {
 	s.hashName = hn
 }
@@ -213,7 +214,7 @@ func (s *SRP) calculateU() (*big.Int, error) {
 // The scheme we use (see source) is to use SHA256 of the concatenation of A and B
 // each represented as a lowercase hexadecimal string.
 // Additionally those hex strings have leading "0" removed even if that makes them of odd length.
-// use calculateUStd() for a standard compliant version
+// use calculateUStd() for a standard compliant version.
 func (s *SRP) calculateUNonStd() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		s.u = nil
