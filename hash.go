@@ -16,20 +16,23 @@ import (
 //  https://www.reddit.com/r/golang/comments/hocwje/just_found_out_that_we_can_namespace_functions_in/
 // for this use of type and var
 
-type srpHash struct{
+type srpHash struct {
+	Sha256Name string
+
+	// People will need to read the source if
+	// the really want to use sha1.
+	sha1Name string
 }
 
 // Hash is thingy hang functions off of.
-var Hash srpHash
-
-const (
-	sha256Name string = "sha256"
-	sha1Name string = "sha1-if-really-needed"
-)
+var Hash = srpHash{
+	Sha256Name: "sha256",
+	sha1Name:   "sha1-if-really-needed",
+}
 
 func (srpHash) IsValid(hn string) error {
 	switch hn {
-	case sha256Name, sha1Name:
+	case Hash.Sha256Name, Hash.sha1Name:
 		return nil
 	}
 	return errors.New("invalid hash choice")
@@ -38,7 +41,7 @@ func (srpHash) IsValid(hn string) error {
 // New returns the default (sha256 hash.Hash function).
 // The caller should check for a nil result.
 func (srpHash) New() hash.Hash {
-	defaultHash := string(sha256Name)
+	defaultHash := Hash.Sha256Name
 	return (Hash).NewWith(defaultHash)
 }
 

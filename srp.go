@@ -116,7 +116,7 @@ func newSRP(serverSide bool, group *Group, xORv, k *big.Int) *SRP {
 
 		badState: false,
 		isServer: serverSide,
-		hashName: "sha256",
+		hashName: Hash.Sha256Name,
 
 		m:              nil,
 		cProof:         nil,
