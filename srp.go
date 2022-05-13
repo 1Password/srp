@@ -3,7 +3,7 @@ package srp
 // package documentation is in doc.go
 
 /**
- ** Copyright 2017 AgileBits, Inc.
+ ** Copyright 2017, 2022 AgileBits, Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License").
  **/
 
@@ -68,6 +68,7 @@ type SRP struct {
 	isServer         bool
 	badState         bool
 	hashName         string // Hash used for constructing k and u
+	stdPadding       bool   // Whether to use RFC5054 PAD for creation of k and u
 }
 
 var (
@@ -84,7 +85,15 @@ Pass in a nil k if you want it to be generated for you.
 Note that you need the same k on both server and client.
 */
 func NewSRPClient(group *Group, x, k *big.Int) *SRP {
-	return newSRP(false, group, x, k)
+	return newSRP(false, group, x, k, false)
+}
+
+// NewClientStd creates a new SRP client with group and SRP x.
+// group is the Diffie-Hellman group to use.
+// x is the client's long term secret.
+// Returns nil on error.
+func NewClientStd(group *Group, x *big.Int) *SRP {
+	return newSRP(false, group, x, nil, true)
 }
 
 /*
@@ -96,10 +105,18 @@ Pass in a a nil k if you want it to be generated for you.
 Note that you need the same k on both server and client.
 */
 func NewSRPServer(group *Group, v, k *big.Int) *SRP {
-	return newSRP(true, group, v, k)
+	return newSRP(true, group, v, k, false)
 }
 
-func newSRP(serverSide bool, group *Group, xORv, k *big.Int) *SRP {
+// NewServerStd creates a new SRP client with group and SRP v.
+// group is the Diffie-Hellman group to use.
+// v is the server's SRP verifier.
+// Returns nil on error.
+func NewServerStd(group *Group, v *big.Int) *SRP {
+	return newSRP(true, group, v, nil, true)
+}
+
+func newSRP(isServer bool, group *Group, xORv, k *big.Int, std bool) *SRP {
 	s := &SRP{
 		// Setting these to Int-zero gives me a useful way to test
 		// if these have been properly set later
@@ -115,12 +132,13 @@ func newSRP(serverSide bool, group *Group, xORv, k *big.Int) *SRP {
 		group:            group,
 
 		badState: false,
-		isServer: serverSide,
+		isServer: isServer,
 		hashName: Hash.Sha256Name,
 
 		m:              nil,
 		cProof:         nil,
 		isServerProved: false,
+		stdPadding:     std,
 	}
 
 	if s.isServer {

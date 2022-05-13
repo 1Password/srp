@@ -57,3 +57,8 @@ func (srpHash) NewWith(hashName string) hash.Hash {
 		return nil
 	}
 }
+
+/**
+ ** Copyright 2022 AgileBits, Inc.
+ ** Licensed under the Apache License, Version 2.0 (the "License").
+ **/

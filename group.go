@@ -248,6 +248,6 @@ func init() {
 }
 
 /**
- ** Copyright 2017 AgileBits, Inc.
+ ** Copyright 2017, 2022 AgileBits, Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License").
  **/

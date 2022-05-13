@@ -35,16 +35,25 @@ func (s *SRP) generateMySecret() *big.Int {
 	return s.ephemeralPrivate
 }
 
-// SetHashName allows set something other than "sha256". Please don't.
-func (s *SRP) SetHashName(hn string) {
+// setHashName allows set something other than "sha256". Please don't.
+// TODO(jpg) Find a way that this can be called before k is computed.
+func (s *SRP) setHashName(hn string) {
 	s.hashName = hn
 }
 
-// makeLittleK initializes multiplier based on group parameters
+// makeLittleK is a wrapper for standard and non-standard variants.
+func (s *SRP) makeLittleK() (*big.Int, error) {
+	if s.stdPadding {
+		return s.MakeLittleKStd()
+	}
+	return s.makeLittleKNonStd()
+}
+
+// makeLittleKNonStd initializes multiplier based on group parameters
 // k = H(N, g)
 // This does _not_ conform to RFC 5054 padding.
 // Use MakeLittleKPadded for a compliant version.
-func (s *SRP) makeLittleK() (*big.Int, error) {
+func (s *SRP) makeLittleKNonStd() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
@@ -72,7 +81,7 @@ func (s *SRP) makeLittleK() (*big.Int, error) {
 
 // MakeLittleKPadded initializes multiplier based on group parameters.
 // k = H(N, g) using RFC 5054 padding.
-func (s *SRP) MakeLittleKPadded() (*big.Int, error) {
+func (s *SRP) MakeLittleKStd() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
 	}
@@ -190,12 +199,22 @@ func (s *SRP) makeVerifier() (*big.Int, error) {
 	return result, nil
 }
 
-// calculateU creates a hash A and B
+// calculateU creates a hash of A and B.
+// It does this the 1Password way or the Standard way depending on s.stdPadding.
+func (s *SRP) calculateU() (*big.Int, error) {
+	if s.stdPadding {
+		return s.calculateUStd()
+	}
+	return s.calculateUNonStd()
+}
+
+// calculateUNonStd creates a hash A and B
 // BUG(jpg): Calculation of u does not use RFC 5054 compatable padding/hashing
 // The scheme we use (see source) is to use SHA256 of the concatenation of A and B
 // each represented as a lowercase hexadecimal string.
 // Additionally those hex strings have leading "0" removed even if that makes them of odd length.
-func (s *SRP) calculateU() (*big.Int, error) {
+// use calculateUStd() for a standard compliant version
+func (s *SRP) calculateUNonStd() (*big.Int, error) {
 	if !s.IsPublicValid(s.ephemeralPublicA) || !s.IsPublicValid(s.ephemeralPublicB) {
 		s.u = nil
 		return nil, fmt.Errorf("both A and B must be known to calculate u")
@@ -275,6 +294,6 @@ func serverStyleHexFromBigInt(bn *big.Int) string {
 }
 
 /**
- ** Copyright 2017, 2020 AgileBits, Inc.
+ ** Copyright 2017, 2022 AgileBits, Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License").
  **/
