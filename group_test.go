@@ -31,7 +31,7 @@ func TestMakeK(t *testing.T) {
 		if k == nil {
 			t.Errorf("failed to create k for %s", grp.Label)
 		}
-		kStr := hex.EncodeToString(k.Bytes())
+		kStr := hex.EncodeToString(k.Bytes()) //nolint:revive // k means k, not konstant
 		t.Logf("Group: %s\nk:     %s", grp.Label, kStr)
 	}
 }
