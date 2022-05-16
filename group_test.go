@@ -1,6 +1,7 @@
 package srp
 
 import (
+	"encoding/hex"
 	"math/big"
 	"testing"
 
@@ -20,6 +21,18 @@ func TestGroups(t *testing.T) {
 				t.Errorf("suspicious group %s: %s", grp.Label, err)
 			}
 		}
+	}
+}
+
+func TestMakeK(t *testing.T) {
+	MinGroupSize = 1024 // We need this to test against spec
+	for _, grp := range KnownGroups {
+		k := grp.LittleK(Hash.Sha256Name)
+		if k == nil {
+			t.Errorf("failed to create k for %s", grp.Label)
+		}
+		kStr := hex.EncodeToString(k.Bytes())
+		t.Logf("Group: %s\nk:     %s", grp.Label, kStr)
 	}
 }
 
