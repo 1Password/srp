@@ -51,7 +51,7 @@ func Example() {
 
 	// this is still our first use scenario, but the client needs to create
 	// an SRP client to generate the verifier.
-	firstClient := srp.NewSRPClient(srp.KnownGroups[group], x, nil)
+	firstClient := srp.NewClientStd(srp.KnownGroups[group], x)
 	if firstClient == nil {
 		log.Fatal("couldn't setup client")
 	}
@@ -70,18 +70,18 @@ func Example() {
 
 	// Some time later, we actually want to authenticate with this stuff
 	// Client and server may talk. Depending on what the client has locally,
-	// The client may need to be told it's salt, and the SRP group to use
+	// The client may need to be told its salt, and the SRP group to use
 	// But here we will assume that that the client knows this, and already has
 	// computed x.
 
-	client := srp.NewSRPClient(srp.KnownGroups[group], x, nil)
+	client := srp.NewClientStd(srp.KnownGroups[group], x)
 
 	// The client will need to send its ephemeral public key to the server
 	// so we fetch that now.
 	A = client.EphemeralPublic()
 
 	// Now it is time for some stuff (though not much) on the server.
-	server := srp.NewSRPServer(srp.KnownGroups[group], v, nil)
+	server := srp.NewServerStd(srp.KnownGroups[group], v)
 	if server == nil {
 		log.Fatal("Couldn't set up server")
 	}
@@ -218,6 +218,6 @@ func Example() {
 }
 
 /**
- ** Copyright 2017 AgileBits, Inc.
+ ** Copyright 2017, 2022 AgileBits, Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License").
  **/

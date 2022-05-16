@@ -147,14 +147,17 @@ func newSRP(isServer bool, group *Group, xORv, k *big.Int, std bool) *SRP {
 		s.x.Set(xORv)
 	}
 
-	if k != nil {
-		// should probably do some sanity checks on k here
-		s.k.Set(k)
-	} else {
-		if _, err := s.makeLittleK(); err != nil {
+	// I really should have been more consistent about 0 or nil to mean unset.
+	if k == nil || k.Sign() < 1 {
+		newK, err := s.makeLittleK()
+		if err != nil {
 			return nil
 		}
+		s.k.Set(newK)
+	} else {
+		s.k.Set(k)
 	}
+
 	s.generateMySecret()
 	if s.isServer {
 		if _, err := s.makeB(); err != nil {
