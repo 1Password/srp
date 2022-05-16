@@ -330,7 +330,7 @@ func (s *SRP) Key() ([]byte, error) {
 		b.Exp(s.group.g, s.x, s.group.n) // #nosec G105
 		b.Mul(b, s.k)
 		b.Sub(s.ephemeralPublicB, b)
-		b.Mod(b, s.group.n)
+		b = s.group.Reduce(b)
 	}
 
 	s.premasterKey.Exp(b, e, s.group.n)

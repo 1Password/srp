@@ -139,9 +139,9 @@ func (s *SRP) makeB() (*big.Int, error) {
 	// We also do some modular reduction on some of our intermediate values
 	term2.Exp(s.group.g, s.ephemeralPrivate, s.group.n) // #nosec G105
 	term1.Mul(s.k, s.v)
-	term1.Mod(term1, s.group.n)
+	term1 = s.group.Reduce(term1)
 	s.ephemeralPublicB.Add(term1, term2)
-	s.ephemeralPublicB.Mod(s.ephemeralPublicB, s.group.n) // #nosec G105
+	s.ephemeralPublicB = s.group.Reduce(s.ephemeralPublicB)
 
 	return s.ephemeralPublicB, nil
 }
@@ -229,8 +229,8 @@ func (s *SRP) calculateUStd() (*big.Int, error) {
 	lenN := len(grp.N().Bytes())
 	A := make([]byte, lenN)
 	B := make([]byte, lenN)
-	(&big.Int{}).Mod(s.ephemeralPublicA, grp.N()).FillBytes(A)
-	(&big.Int{}).Mod(s.ephemeralPublicB, grp.N()).FillBytes(B)
+	grp.Reduce(s.ephemeralPublicA).FillBytes(A)
+	grp.Reduce(s.ephemeralPublicB).FillBytes(B)
 
 	h := Hash.NewWith(s.hashName)
 	if h == nil {
