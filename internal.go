@@ -95,7 +95,7 @@ func (s *SRP) makeA() (*big.Int, error) {
 	if s.isServer {
 		return nil, fmt.Errorf("only the client can make A")
 	}
-	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
+	if s.group.IsZero(s.ephemeralPrivate) {
 		s.ephemeralPrivate = s.generateMySecret()
 	}
 
@@ -116,7 +116,7 @@ func (s *SRP) makeB() (*big.Int, error) {
 	if !s.isServer {
 		return nil, fmt.Errorf("only the server can make B")
 	}
-	if s.v.Cmp(bigZero) == 0 {
+	if s.group.IsZero(s.v) {
 		return nil, fmt.Errorf("v must be known before B can be calculated")
 	}
 	// This test is so I'm not lying to gosec wrt to G105
@@ -125,13 +125,13 @@ func (s *SRP) makeB() (*big.Int, error) {
 	}
 
 	// Generatable prerequisites: k, b if needed
-	if s.k.Cmp(bigZero) == 0 {
+	if s.group.IsZero(s.k) {
 		var err error
 		if s.k, err = s.makeLittleK(); err != nil {
 			return nil, err
 		}
 	}
-	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
+	if s.group.IsZero(s.ephemeralPrivate) {
 		s.ephemeralPrivate = s.generateMySecret()
 	}
 
@@ -151,7 +151,7 @@ func (s *SRP) isUValid() bool {
 		s.u = nil
 		return false
 	}
-	if s.u.Cmp(bigZero) == 0 {
+	if s.group.IsZero(s.u) {
 		return false
 	}
 	return true
@@ -165,7 +165,7 @@ func (s *SRP) makeVerifier() (*big.Int, error) {
 	if s.badState {
 		return nil, fmt.Errorf("we have bad data")
 	}
-	if s.x.Cmp(bigZero) == 0 {
+	if s.group.IsZero(s.x) {
 		return nil, fmt.Errorf("x must be known to calculate v")
 	}
 
@@ -210,7 +210,7 @@ func (s *SRP) calculateUNonStd() (*big.Int, error) {
 
 	u := &big.Int{}
 	s.u = u.SetBytes(h.Sum(nil))
-	if s.u.Cmp(bigZero) == 0 {
+	if s.group.IsZero(s.u) {
 		return nil, fmt.Errorf("u == 0, which is a bad thing")
 	}
 	return s.u, nil
@@ -248,7 +248,7 @@ func (s *SRP) calculateUStd() (*big.Int, error) {
 	}
 	u := &big.Int{}
 	s.u = u.SetBytes(h.Sum(nil))
-	if s.u.Cmp(bigZero) == 0 {
+	if s.group.IsZero(s.u) {
 		return nil, fmt.Errorf("u == 0, which is a bad thing")
 	}
 	return s.u, nil

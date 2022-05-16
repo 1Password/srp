@@ -181,14 +181,14 @@ The caller just needs to send EphemeralPublic() to the other party.
 */
 func (s *SRP) EphemeralPublic() *big.Int {
 	if s.isServer {
-		if s.ephemeralPublicB.Cmp(bigZero) == 0 {
+		if s.group.IsZero(s.ephemeralPublicB) {
 			if _, err := s.makeB(); err != nil {
 				return nil
 			}
 		}
 		return s.ephemeralPublicB
 	}
-	if s.ephemeralPublicA.Cmp(bigZero) == 0 {
+	if s.group.IsZero(s.ephemeralPublicA) {
 		if _, err := s.makeA(); err != nil {
 			return nil
 		}
@@ -201,30 +201,21 @@ IsPublicValid checks to see whether public A or B is valid within the group.
 
 A client can do very bad things by sending a malicious A to the server.
 The server can do mildly bad things by sending a malicious B to the client.
-This method is public in case the user wishes to check those values earlier than
+This method is public in case the user wishes to check those values earlier
 than using SetOthersPublic(), which also performs this check.
 */
 //nolint:gocritic // A != a. Case matters
 func (s *SRP) IsPublicValid(AorB *big.Int) bool {
-	result := big.Int{}
-	// There are three ways to fail.
-	// 1. If we aren't checking with respect to a valid group
-	// 2. If public paramater zero or a multiple of M
-	// 3. If public parameter is not relatively prime to N (a bad group?)
-	if s.group == nil {
-		return false
-	}
-	if s.group.g.Cmp(bigZero) == 0 {
+	// We assume that we have a good s.group
+
+	if s.group.Reduce(AorB).Cmp(bigOne) == 0 {
 		return false
 	}
 
-	if result.Mod(AorB, s.group.n); result.Sign() == 0 {
+	if s.group.IsZero(AorB) {
 		return false
 	}
 
-	if result.GCD(nil, nil, AorB, s.group.n).Cmp(bigOne) != 0 {
-		return false
-	}
 	return true
 }
 
@@ -313,7 +304,7 @@ func (s *SRP) Key() ([]byte, error) {
 		s.badState = true
 		return nil, fmt.Errorf("invalid u")
 	}
-	if s.ephemeralPrivate.Cmp(bigZero) == 0 {
+	if s.group.IsZero(s.ephemeralPrivate) {
 		return nil, fmt.Errorf("cannot make Key with my ephemeral secret")
 	}
 

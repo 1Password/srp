@@ -28,6 +28,17 @@ func (g *Group) Generator() *big.Int {
 	return g.g
 }
 
+// Reduce returns x modulo the group modulus.
+func (g *Group) Reduce(x *big.Int) *big.Int {
+	return (&big.Int{}).Mod(x, g.n)
+}
+
+// IsZero returns whether x is 0 modulo group modulus.
+func (g *Group) IsZero(x *big.Int) bool {
+	// big.Ints have a sign of -1, 0, or 1. 0 is what we are looking for
+	return (&big.Int{}).Mod(x, g.n).Sign() == 0
+}
+
 // LittleK returns H(N, PAD(g)), the multiplier used SRP computations.
 func (g *Group) LittleK(hashName string) *big.Int {
 	if g.k != nil {
