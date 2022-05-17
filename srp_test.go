@@ -288,6 +288,7 @@ func TestClientServerMatch(t *testing.T) {
 	}
 }
 
+// TestBadA checks that if A mod N = 0 errors are returned and no key created.
 func TestBadA(t *testing.T) {
 	xbytes := make([]byte, 32)
 	if _, err := rand.Read(xbytes); err != nil {
@@ -295,19 +296,62 @@ func TestBadA(t *testing.T) {
 	}
 	v := &big.Int{}
 	v.SetBytes(xbytes)
+	grp := KnownGroups[RFC5054Group2048]
+	N := grp.N()
 
-	server := NewSRPServer(KnownGroups[RFC5054Group2048], v, nil)
-
-	if err := server.SetOthersPublic(server.group.n); err == nil {
-		t.Error("a bad A was accepted")
+	server := NewSRPServer(grp, v, nil)
+	if server == nil {
+		t.Error("failed to create server")
 	}
+	multiples := []int{0, 1, -3, 5}
+	for m := range multiples {
+		A := (&big.Int{}).Mul(big.NewInt(int64(m)), N)
 
-	key, err := server.Key()
-	if err == nil {
-		t.Error("no error on key creation after bad B")
+		if err := server.SetOthersPublic(A); err == nil {
+			t.Error("a bad A was accepted")
+		}
+
+		key, err := server.Key()
+		if err == nil {
+			t.Error("no error on key creation after bad A")
+		}
+		if key != nil {
+			t.Error("key created after bad A")
+		}
 	}
-	if key != nil {
-		t.Error("key created after bad B")
+}
+
+// TestBadB checks that if A mod N = 1 errors are returned and no key created.
+func TestBadB(t *testing.T) {
+	xbytes := make([]byte, 32)
+	if _, err := rand.Read(xbytes); err != nil {
+		t.Error(err)
+	}
+	x := &big.Int{}
+	x.SetBytes(xbytes)
+	grp := KnownGroups[RFC5054Group2048]
+	N := grp.N()
+
+	client := NewSRPClient(grp, x, nil)
+	if client == nil {
+		t.Error("failed to create client")
+	}
+	multiples := []int{0, 1, -3, 5}
+	for m := range multiples {
+		B := (&big.Int{}).Mul(big.NewInt(int64(m)), N)
+		B = B.Add(bigOne, B)
+
+		if err := client.SetOthersPublic(B); err == nil {
+			t.Error("a bad B was accepted")
+		}
+
+		key, err := client.Key()
+		if err == nil {
+			t.Error("no error on key creation after bad B")
+		}
+		if key != nil {
+			t.Error("key created after bad B")
+		}
 	}
 }
 
