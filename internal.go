@@ -224,13 +224,10 @@ func (s *SRP) calculateUStd() (*big.Int, error) {
 	}
 
 	// A and B will be big-endian byte arrays padded to byte length of N
-	// FillBytes() panics if buffer isn't large enough, so we must reduce A and B first.
 	grp := s.group
 	lenN := len(grp.N().Bytes())
-	A := make([]byte, lenN)
-	B := make([]byte, lenN)
-	grp.Reduce(s.ephemeralPublicA).FillBytes(A)
-	grp.Reduce(s.ephemeralPublicB).FillBytes(B)
+	A := grp.PaddedBytes(s.ephemeralPublicA)
+	B := grp.PaddedBytes(s.ephemeralPublicB)
 
 	h := Hash.NewWith(s.hashName)
 	if h == nil {

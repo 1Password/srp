@@ -59,10 +59,9 @@ func (g *Group) LittleK(hashName string) *big.Int {
 
 // computeK returns k=H(N, PAD(g)) or error if there was some hashing error.
 func (g *Group) computeK(h hash.Hash) (*big.Int, error) {
-	// Get N and g as byte arrays, with g zero padded to be same size as N
 	NBytes := g.n.Bytes()
-	gBytes := make([]byte, len(NBytes))
-	gBytes = g.g.FillBytes(gBytes)
+
+	gBytes := g.PaddedBytes(g.g)
 
 	_, err := h.Write(NBytes)
 	if err != nil {
@@ -76,6 +75,18 @@ func (g *Group) computeK(h hash.Hash) (*big.Int, error) {
 	k := (&big.Int{}).SetBytes(h.Sum(nil))
 
 	return k, nil
+}
+
+// PaddedBytes returns x (mod N), padded to be the same byte length as N.
+func (g *Group) PaddedBytes(x *big.Int) []byte {
+	reducedX := (&big.Int{}).Mod(x, g.n)
+
+	// Get N and x as byte arrays, with x zero padded to be same size as N
+	NBytes := g.n.Bytes()
+	xBytes := make([]byte, len(NBytes))
+	xBytes = reducedX.FillBytes(xBytes)
+
+	return xBytes
 }
 
 // MarshalBinary returns a binary gob with the complete state of the Group object.
