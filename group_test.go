@@ -1,7 +1,6 @@
 package srp
 
 import (
-	"encoding/hex"
 	"math/big"
 	"testing"
 
@@ -25,14 +24,32 @@ func TestGroups(t *testing.T) {
 }
 
 func TestMakeK(t *testing.T) {
-	MinGroupSize = 1024 // We need this to test against spec
-	for _, grp := range KnownGroups {
+	MinGroupSize = 1024 // We need this to test against spec (though we are using sha256 here)
+	type TestVec struct {
+		groupID   int
+		expectedK string
+	}
+	testVectors := []TestVec{
+		{
+			groupID:   RFC5054Group1024,
+			expectedK: "1a1a4c140cde70ae360c1ec33a33155b1022df951732a476a862eb3ab8206a5c",
+		},
+		{
+			groupID:   RFC5054Group4096,
+			expectedK: "3509477ea9fca66eadb7cf7b1bd0eb508f54d3989a9c988006a7d0b338374dd2",
+		},
+	}
+
+	for _, tVec := range testVectors {
+		grp := KnownGroups[tVec.groupID]
 		k := grp.LittleK(Hash.Sha256Name)
 		if k == nil {
 			t.Errorf("failed to create k for %s", grp.Label)
 		}
-		kStr := hex.EncodeToString(k.Bytes()) //nolint:revive // k means k, not konstant
-		t.Logf("Group: %s\nk:     %s", grp.Label, kStr)
+		exK := NumberFromString(tVec.expectedK)
+		if k.Cmp(exK) != 0 {
+			t.Errorf("unexpected k for %s", grp.Label)
+		}
 	}
 }
 
@@ -76,6 +93,6 @@ func checkGroupSlow(group Group) error {
 }
 
 /**
- ** Copyright 2017 AgileBits, Inc.
+ ** Copyright 2017, 2022 AgileBits, Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License").
  **/
