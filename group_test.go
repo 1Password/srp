@@ -35,8 +35,24 @@ func TestMakeK(t *testing.T) {
 			expectedK: "1a1a4c140cde70ae360c1ec33a33155b1022df951732a476a862eb3ab8206a5c",
 		},
 		{
+			groupID:   RFC5054Group2048,
+			expectedK: "05b9e8ef059c6b32ea59fc1d322d37f04aa30bae5aa9003b8321e21ddb04e300",
+		},
+		{
+			groupID:   RFC5054Group3072,
+			expectedK: "081f4874fa543a371b49a670402fda59ecfab53a1b850fc42e1c357cc846111e",
+		},
+		{
 			groupID:   RFC5054Group4096,
 			expectedK: "3509477ea9fca66eadb7cf7b1bd0eb508f54d3989a9c988006a7d0b338374dd2",
+		},
+		{
+			groupID:   RFC5054Group6144,
+			expectedK: "c20a2358a22043c87465fa22f1be940590bcf2d5f61c61140b87f4fb63080969",
+		},
+		{
+			groupID:   RFC5054Group8192,
+			expectedK: "8e9016415151f884f9c31b6f948252361d82a80d08a7cf690e5c889df6718c31",
 		},
 	}
 
