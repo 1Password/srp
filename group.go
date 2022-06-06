@@ -191,7 +191,7 @@ func init() {
 	g3072 := &Group{
 		g:            big.NewInt(5),
 		n:            g3072n,
-		k:            nil,
+		k:            NumberFromString("0x081f4874fa543a371b49a670402fda59ecfab53a1b850fc42e1c357cc846111e"),
 		Label:        "5054A3072",
 		ExponentSize: 32,
 	}
@@ -219,7 +219,7 @@ func init() {
 	g4096 := &Group{
 		g:            big.NewInt(5),
 		n:            g4096n,
-		k:            nil,
+		k:            NumberFromString("0x3509477ea9fca66eadb7cf7b1bd0eb508f54d3989a9c988006a7d0b338374dd2"),
 		Label:        "5054A4096",
 		ExponentSize: 38,
 	}
@@ -256,7 +256,7 @@ func init() {
 	g6144 := &Group{
 		g:            big.NewInt(5),
 		n:            g6144n,
-		k:            nil,
+		k:            NumberFromString("0xc20a2358a22043c87465fa22f1be940590bcf2d5f61c61140b87f4fb63080969"),
 		Label:        "5054A6144",
 		ExponentSize: 43,
 	}
@@ -302,7 +302,7 @@ func init() {
 	g8192 := &Group{
 		g:            big.NewInt(19),
 		n:            g8192n,
-		k:            nil,
+		k:            NumberFromString("0x8e9016415151f884f9c31b6f948252361d82a80d08a7cf690e5c889df6718c31"),
 		Label:        "5054A8192",
 		ExponentSize: 48,
 	}

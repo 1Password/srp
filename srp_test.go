@@ -288,6 +288,56 @@ func TestClientServerMatch(t *testing.T) {
 	}
 }
 
+// Test that "old" behavior with server selected k works.
+func TestClientServerMatchK(t *testing.T) {
+	var err error
+	var v *big.Int
+	groupID := RFC5054Group4096
+
+	xbytes := make([]byte, 32)
+	if _, err := rand.Read(xbytes); err != nil {
+		t.Error(err)
+	}
+	x := &big.Int{}
+	x.SetBytes(xbytes)
+
+	// In 1Password, server selectec k is session IDs, random 16 bytes
+	k := NumberFromString("0xa611d95647dcd1ccf38eae713169dbf9")
+
+	client := NewSRPClient(KnownGroups[groupID], x, k)
+
+	if v, err = client.Verifier(); err != nil {
+		t.Errorf("verifier creation failed: %s", err)
+	}
+
+	server := NewSRPServer(KnownGroups[groupID], v, k)
+
+	A := client.EphemeralPublic()
+	B := server.EphemeralPublic()
+	if err := server.SetOthersPublic(A); err != nil {
+		t.Error(err)
+	}
+	if err := client.SetOthersPublic(B); err != nil {
+		t.Error(err)
+	}
+
+	serverKey, _ := server.Key()
+	clientKey, _ := client.Key()
+
+	if server.k.Cmp(client.k) != 0 {
+		t.Error("Server and Client k don't match")
+	}
+	if server.k.Cmp(k) != 0 {
+		t.Error("Server k was not set manually")
+	}
+	if server.u.Cmp(client.u) != 0 {
+		t.Error("Server and Client u don't match")
+	}
+	if !bytes.Equal(serverKey, clientKey) {
+		t.Error("Server and Client keys don't match")
+	}
+}
+
 // TestBadA checks that if A mod N = 0 errors are returned and no key created.
 func TestBadA(t *testing.T) {
 	xbytes := make([]byte, 32)
