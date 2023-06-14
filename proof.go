@@ -19,7 +19,7 @@ We will use math/big Bytes() to get the absolute value as a big-endian byte
 slice (without padding to size of N)
 */
 
-// M returns the server's proof of knowledge of key.
+// M returns the server's proof of knowledge of key (proven by the client).
 func (s *SRP) M(salt []byte, uname string) ([]byte, error) {
 	if s.m != nil || len(s.m) != 0 {
 		return s.m, nil
@@ -36,13 +36,12 @@ func (s *SRP) M(salt []byte, uname string) ([]byte, error) {
 		return nil, fmt.Errorf("XOR had %d bytes instead of %d",
 			length, sha256.Size)
 	}
-	groupHash := sha256.Sum256(groupXOR)
 
 	uHash := sha256.Sum256([]byte(uname))
 	h := sha256.New()
 
-	if _, err := h.Write(groupHash[:]); err != nil {
-		return nil, fmt.Errorf("failed to write group hash to hasher: %w", err)
+	if _, err := h.Write(groupXOR[:]); err != nil {
+		return nil, fmt.Errorf("failed to write group xor to hasher: %w", err)
 	}
 	if _, err := h.Write(uHash[:]); err != nil {
 		return nil, fmt.Errorf("failed to write u hash to hasher: %w", err)
