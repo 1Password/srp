@@ -71,7 +71,7 @@ func Example() {
 	// Some time later, we actually want to authenticate with this stuff
 	// Client and server may talk. Depending on what the client has locally,
 	// The client may need to be told its salt, and the SRP group to use
-	// But here we will assume that that the client knows this, and already has
+	// But here we will assume that the client knows this, and already has
 	// computed x.
 
 	client := srp.NewClientStd(srp.KnownGroups[group], x)
@@ -129,7 +129,7 @@ func Example() {
 		log.Fatal(err)
 	}
 
-	// client tests tests that the server sent a good proof
+	// client tests that the server sent a good proof
 	if !client.GoodServerProof(salt, username, serverProof) {
 		// Client must bail and not send a its own proof back to the server
 		log.Fatal("bad proof from server")

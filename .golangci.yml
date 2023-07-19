@@ -5,6 +5,8 @@ linters:
     # too noisy
     - cyclop
     - depguard
+    # dupword is somewhat useful, but tagging false positives is not a good use of anyone's time
+    - dupword
     - exhaustivestruct
     - funlen
     - gochecknoglobals

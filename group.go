@@ -18,7 +18,7 @@ type Group struct {
 	ExponentSize int // RFC 3526 §8
 }
 
-// N returns the modulus of the the group.
+// N returns the modulus of the group.
 func (g *Group) N() *big.Int {
 	return g.n
 }
