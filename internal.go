@@ -37,6 +37,7 @@ func (s *SRP) generateMySecret() *big.Int {
 
 // setHashName allows set something other than "sha256". Please don't.
 // TODO(jpg) Find a way that this can be called before k is computed.
+//
 //nolint:unused
 func (s *SRP) setHashName(hn string) {
 	s.hashName = hn
