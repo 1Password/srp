@@ -40,7 +40,7 @@ func (s *SRP) M(salt []byte, uname string) ([]byte, error) {
 	uHash := sha256.Sum256([]byte(uname))
 	h := sha256.New()
 
-	if _, err := h.Write(groupXOR[:]); err != nil {
+	if _, err := h.Write(groupXOR); err != nil {
 		return nil, fmt.Errorf("failed to write group xor to hasher: %w", err)
 	}
 	if _, err := h.Write(uHash[:]); err != nil {
