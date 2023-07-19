@@ -15,7 +15,7 @@ BUG(jpg): This does not use the same padding and hashing scheme as in RFC 5054,
 and therefore is not interoperable with those clients and servers. Perhaps someday
 we'll add an RFC 5054 mode that does that, but today is not that day.
 
-The SRP protocol
+# The SRP protocol
 
 It would be nice if this package could be used without having some understanding of the SRP protocol,
 but too much of the language and naming depends on at least some familiarity. Here is a summary.
@@ -45,40 +45,40 @@ during the session.
 Quoting from http://srp.stanford.edu/design.html (with some modification
 for KDF and and checks)
 
-    Names and notation
-	N    A large safe prime (N = 2q+1, where q is prime)
-	     All arithmetic is done modulo N.
-  	g    A generator modulo N
-  	k    Multiplier parameter (k = H(N, g) in SRP-6a;
-             k = 3 for legacy SRP-6; k is a hash of the session ID within 1Password
-  	H()  One-way hash function
-  	^    (Modular) Exponentiation
-  	u    Random scrambling parameter
-  	a,b  Secret ephemeral values
-  	A,B  Public ephemeral values
-  	x    Long term client secret (derived via KDF)
-	v    Long term server Verifier (derived from x)
-	s    Salt for key derivation function
-	I    User identifiers (username, account ID, etc)
-	KDF()    Key Derivation Function
+	    Names and notation
+		N    A large safe prime (N = 2q+1, where q is prime)
+		     All arithmetic is done modulo N.
+	  	g    A generator modulo N
+	  	k    Multiplier parameter (k = H(N, g) in SRP-6a;
+	             k = 3 for legacy SRP-6; k is a hash of the session ID within 1Password
+	  	H()  One-way hash function
+	  	^    (Modular) Exponentiation
+	  	u    Random scrambling parameter
+	  	a,b  Secret ephemeral values
+	  	A,B  Public ephemeral values
+	  	x    Long term client secret (derived via KDF)
+		v    Long term server Verifier (derived from x)
+		s    Salt for key derivation function
+		I    User identifiers (username, account ID, etc)
+		KDF()    Key Derivation Function
 
-    The authentication protocol itself goes as follows
+	    The authentication protocol itself goes as follows
 
-	User -> Host:  I, A = g^a           (identifies self, a = random number)
-	Host: check that A mod N != 0       (A mod N = 0 MUST be treated as authn failure)
-	Host -> User:  s, B = kv + g^b      (sends salt, b = random number)
+		User -> Host:  I, A = g^a           (identifies self, a = random number)
+		Host: check that A mod N != 0       (A mod N = 0 MUST be treated as authn failure)
+		Host -> User:  s, B = kv + g^b      (sends salt, b = random number)
 
-	Both:  u = H(A, B)
+		Both:  u = H(A, B)
 
-	User:  x = KDF(s, ...)             (user derives x)
-	User:  S = (B - kg^x) ^ (a + ux)   (computes raw session key)
-	User:  K = H(S)                    (computes session key)
+		User:  x = KDF(s, ...)             (user derives x)
+		User:  S = (B - kg^x) ^ (a + ux)   (computes raw session key)
+		User:  K = H(S)                    (computes session key)
 
-	Host:  S = (Av^u) ^ b              (computes raw session key)
-	Host:  K = H(S)                    (computes session key)
+		Host:  S = (Av^u) ^ b              (computes raw session key)
+		Host:  K = H(S)                    (computes session key)
 
-    Now the two parties have a shared, strong session key K.
-    To complete authentication, they need to prove to each other that their keys match.
+	    Now the two parties have a shared, strong session key K.
+	    To complete authentication, they need to prove to each other that their keys match.
 
 This package does not address the actual communication between client and
 server. But through the SRP type it not only performs the calculations needed,
@@ -96,9 +96,9 @@ The key derivation function, KDF()
 	The server then stores {I, s, v} long term. v needs to be protected in the same way that
 	a password hash should be protected.
 
-User's security responsibilities
+# User's security responsibilities
 
-The consumer is responsible for
+# The consumer is responsible for
 
 1. Both client and server: Checking whether methods have returned without error.
 This is particularly true of SRP.Key() and SetOthersPublic()

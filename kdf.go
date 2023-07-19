@@ -25,7 +25,8 @@ that that makes the server stored verifiers hard to crack.
 This computes the client's long term secret, x
 from  a username, password, and salt as described
 in RFC 5054 §2.6, which says
-    x = SHA1(s | SHA1(I | ":" | P))
+
+	x = SHA1(s | SHA1(I | ":" | P))
 */
 func KDFRFC5054(salt []byte, username string, password string) (x *big.Int) {
 	p := []byte(PreparePassword(password))

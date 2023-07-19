@@ -23,7 +23,7 @@ while proving to each other that they each know their long term secrets (x is th
 secret and v is the server's secret). Although the key that you arrive at is 32 bytes, its
 strength is a function of the group size used.
 
-Creating the SRP object with with NewSRPServer()/NewSRPClient() takes care of generating your ephemeral
+Creating the SRP object with NewSRPServer()/NewSRPClient() takes care of generating your ephemeral
 secret (a or b depending on whether you are a client or server), your public
 ephemeral key (A or B depending on whether you are a client or server),
 the multiplier k. (There is a setter for k if you wish to use a different scheme
@@ -101,7 +101,7 @@ NewSRPServer sets up an SRP object for a server.
 
 Recall that group is the Diffie-Hellman group to be used,
 v is your long term secret and k is the set multiplier.
-Pass in a a nil k if you want it to be generated for you.
+Pass in a nil k if you want it to be generated for you.
 Note that you need the same k on both server and client.
 */
 func NewSRPServer(group *Group, v, k *big.Int) *SRP {
