@@ -23,3 +23,10 @@ linters:
     - interfacer
     - maligned
     - scopelint
+
+linters-settings:
+  depguard:
+    rules:
+      main:
+        allow:
+        - github.com/1Password/srp
