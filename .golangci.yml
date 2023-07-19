@@ -17,6 +17,7 @@ linters:
     - gomoddirectives
     - ifshort
     - nlreturn
+    - nonamedreturns
     - paralleltest
     - testpackage
     - varnamelen
