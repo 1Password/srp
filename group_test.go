@@ -1,10 +1,9 @@
 package srp
 
 import (
+	"errors"
 	"math/big"
 	"testing"
-
-	"github.com/pkg/errors"
 )
 
 var runVerySlowTests = false // run slow tests on groups?
