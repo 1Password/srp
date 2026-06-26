@@ -20,7 +20,7 @@ type srpHash struct {
 	Sha256Name string
 
 	// People will need to read the source if
-	// the really want to use sha1.
+	// they really want to use sha1.
 	sha1Name string
 }
 

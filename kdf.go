@@ -20,7 +20,7 @@ KDFRFC5054 is *NOT* recommended. Instead use a key derivation function (KDF) tha
 involves a hashing scheme designed for password hashing.
 The SRP verifier that is stored by the server is like
 a password hash with respect to crackability. Choose a KDF
-that that makes the server stored verifiers hard to crack.
+that makes the server stored verifiers hard to crack.
 
 This computes the client's long term secret, x
 from  a username, password, and salt as described
