@@ -86,7 +86,7 @@ func Example() {
 		log.Fatal("Couldn't set up server")
 	}
 
-	// The server will get A (clients ephemeral public key) from the client
+	// The server will get A (client's ephemeral public key) from the client
 	// which the server will set using SetOthersPublic
 
 	// Server MUST check error status here as defense against

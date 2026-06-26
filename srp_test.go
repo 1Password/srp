@@ -167,7 +167,7 @@ func TestNewSRPAgainstSpec(t *testing.T) {
 	var ret *big.Int
 	var retBytes []byte
 
-	// Our calculation of k is not compatable with RFC5054
+	// Our calculation of k is not compatible with RFC5054
 	if server.k.Cmp(k) != 0 {
 		t.Error("Didn't set k, it seems")
 	}

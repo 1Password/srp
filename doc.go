@@ -7,7 +7,7 @@
 Package srp Secure Remote Password protocol
 
 The principal interface provided by this package is the SRP type. The end aim
-of the caller is to to have an SRP server and SRP client arrive at the same
+of the caller is to have an SRP server and SRP client arrive at the same
 key. See the documentation for the SRP structure and its methods for the nitty
 gritty of use.
 
@@ -27,7 +27,7 @@ the verifier, is known as "v". The verifier is mathematically related to x and i
 computed by the client on first enrollment and transmitted to the server.
 
 Typically the server will store the verifier and the client will derive x from a user
-secret such as a password. Because the verifier can used like a password hash with
+secret such as a password. Because the verifier can be used like a password hash with
 respect to cracking, the derivation of x should be designed to resist password cracking
 if the verifier is compromised.
 
@@ -43,7 +43,7 @@ secrets and can generate a session key, K, which may be used for further encrypt
 during the session.
 
 Quoting from http://srp.stanford.edu/design.html (with some modification
-for KDF and and checks)
+for KDF and checks)
 
 	    Names and notation
 		N    A large safe prime (N = 2q+1, where q is prime)

@@ -9,7 +9,7 @@ import (
 )
 
 /*
-The principle srp.go file was getting too long, so I'm putting the non-exported
+The principal srp.go file was getting too long, so I'm putting the non-exported
 methods in here.
 */
 
@@ -35,7 +35,7 @@ func (s *SRP) generateMySecret() *big.Int {
 	return s.ephemeralPrivate
 }
 
-// setHashName allows set something other than "sha256". Please don't.
+// setHashName allows setting something other than "sha256". Please don't.
 // TODO(jpg) Find a way that this can be called before k is computed.
 //
 //nolint:unused
@@ -158,7 +158,7 @@ func (s *SRP) isUValid() bool {
 	return true
 }
 
-// makeVerifier creates to the verifier from x and parameters.
+// makeVerifier creates the verifier from x and parameters.
 func (s *SRP) makeVerifier() (*big.Int, error) {
 	if s.group == nil {
 		return nil, fmt.Errorf("group not set")
@@ -185,7 +185,7 @@ func (s *SRP) calculateU() (*big.Int, error) {
 }
 
 // calculateUNonStd creates a hash A and B
-// BUG(jpg): Calculation of u does not use RFC 5054 compatable padding/hashing
+// BUG(jpg): Calculation of u does not use RFC 5054 compatible padding/hashing
 // The scheme we use (see source) is to use SHA256 of the concatenation of A and B
 // each represented as a lowercase hexadecimal string.
 // Additionally those hex strings have leading "0" removed even if that makes them of odd length.
